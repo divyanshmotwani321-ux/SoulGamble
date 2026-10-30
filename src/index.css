@@ -1,0 +1,1144 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #07030d;
+    color: #f8fafc;
+    font-family: 'Outfit', sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-serif-display {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* =========================================================
+   RETRO ARCADE TYPOGRAPHY & CRT AESTHETIC
+   ========================================================= */
+.font-arcade {
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: -0.05em;
+}
+
+.font-vt323 {
+  font-family: 'VT323', monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Subtle CRT Scanlines Overlay */
+.crt-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.015),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 4px 100%;
+  opacity: 0.7;
+}
+
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 998;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.75), inset 0 0 160px rgba(0, 0, 0, 0.85);
+}
+
+/* Manga High-Contrast Borders & Hard Drop Shadows */
+.border-manga {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #000;
+}
+
+.border-manga-gold {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #b45309;
+}
+
+.border-manga-purple {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #581c87;
+}
+
+.border-manga-rose {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #9f1239;
+}
+
+.shadow-manga {
+  box-shadow: 4px 4px 0 #000;
+}
+
+.shadow-manga-lg {
+  box-shadow: 6px 6px 0 #000;
+}
+
+/* =========================================================
+   SCREEN SHAKE ANIMATIONS
+   ========================================================= */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-10px, 8px) rotate(-1.5deg); }
+  25% { transform: translate(9px, -9px) rotate(1.5deg); }
+  40% { transform: translate(-8px, -6px) rotate(-1deg); }
+  55% { transform: translate(7px, 7px) rotate(1deg); }
+  70% { transform: translate(-5px, 3px) rotate(-0.5deg); }
+  85% { transform: translate(3px, -3px) rotate(0.5deg); }
+}
+
+.screen-shake-intense {
+  animation: screenShake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes purpleAuraFlash {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.85) 0%, rgba(88, 28, 135, 0.9) 60%, rgba(15, 7, 28, 0.95) 100%);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.purple-aura-flash {
+  animation: purpleAuraFlash 0.8s ease-out forwards;
+}
+
+/* =========================================================
+   FIRST-PERSON VIEW (FPV) 3D TABLE PERSPECTIVE
+   ========================================================= */
+.perspective-stage {
+  perspective: 1000px;
+  perspective-origin: 50% 28%;
+}
+
+.fpv-table {
+  transform: rotateX(38deg);
+  transform-origin: center 65%;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+
+/* Deep Mahogany Wood Rim + Casino Green Felt */
+.felt-surface {
+  background: 
+    radial-gradient(ellipse at 50% 40%, rgba(16, 96, 52, 0.95) 0%, rgba(9, 60, 32, 0.98) 55%, rgba(4, 32, 17, 1) 100%);
+  border: 14px solid #3d1b09;
+  outline: 4px solid #1a0802;
+  border-radius: 90px / 55px;
+  box-shadow: 
+    inset 0 0 60px rgba(0, 0, 0, 0.85),
+    inset 0 4px 12px rgba(251, 191, 36, 0.15),
+    0 25px 60px rgba(0, 0, 0, 0.95);
+  position: relative;
+}
+
+/* Inlaid Oval Gold Line on Felt */
+.felt-gold-ring {
+  position: absolute;
+  inset: 24px;
+  border: 2px dashed rgba(234, 179, 8, 0.35);
+  border-radius: 75px / 45px;
+  pointer-events: none;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.1);
+}
+
+/* =========================================================
+   3D PERSPECTIVE CARDS ON FELT
+   ========================================================= */
+.card-3d-wrapper {
+  transform-style: preserve-3d;
+  transition: transform 0.28s cubic-bezier(0.2, 0.85, 0.25, 1), box-shadow 0.28s ease;
+  will-change: transform;
+}
+
+/* Default resting card flat on felt */
+.card-on-felt {
+  transform: rotateX(0deg) translateZ(4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Hovering Jotaro card tilts toward camera for inspection */
+.card-hover-tilt:hover {
+  transform: rotateX(-20deg) translateY(-15px) translateZ(35px) !important;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.65) !important;
+  z-index: 30;
+}
+
+/* Selected discard card elevated with warning glow */
+.card-selected-tilt {
+  transform: rotateX(-20deg) translateY(-26px) translateZ(48px) !important;
+  box-shadow: 0 22px 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(239, 68, 68, 0.9) !important;
+  z-index: 35;
+}
+
+/* Card 3D Flip */
+.card-flipper-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-flipped-3d {
+  transform: rotateY(180deg);
+}
+
+.card-face-front,
+.card-face-back {
+  backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+}
+
+.card-face-back {
+  transform: rotateY(180deg);
+}
+
+/* Dealing slide animation */
+@keyframes cardSlideInPlayer {
+  0% {
+    opacity: 0;
+    transform: translateY(-260px) translateZ(-60px) scale(0.65);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0deg) translateZ(4px) scale(1);
+  }
+}
+
+.card-anim-deal-player {
+  animation: cardSlideInPlayer 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.15) both;
+}
+
+@keyframes cardSlideInDarby {
+  0% {
+    opacity: 0;
+    transform: translateY(-120px) scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0deg) translateZ(2px) scale(1);
+  }
+}
+
+.card-anim-deal-darby {
+  animation: cardSlideInDarby 0.4s ease-out both;
+}
+
+/* =========================================================
+   3D STACKED SOUL COINS
+   ========================================================= */
+.soul-coin-3d {
+  position: relative;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 50%, #854d0e 100%);
+  box-shadow: 
+    0 1px 0 #78350f,
+    0 2px 0 #78350f,
+    0 3px 0 #5f2a0b,
+    0 4px 0 #451a03,
+    0 6px 10px rgba(0, 0, 0, 0.8);
+  border: 1.5px solid #fef08a;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.soul-coin-purple-3d {
+  position: relative;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #d8b4fe 0%, #9333ea 50%, #4c1d95 100%);
+  box-shadow: 
+    0 1px 0 #3b0764,
+    0 2px 0 #3b0764,
+    0 3px 0 #2e0854,
+    0 4px 0 #1e0538,
+    0 6px 10px rgba(0, 0, 0, 0.8);
+  border: 1.5px solid #e9d5ff;
+}
+
+@keyframes chipSlideToPot {
+  0% {
+    opacity: 0;
+    transform: translateY(80px) scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chip-slide-in {
+  animation: chipSlideToPot 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.2) forwards;
+}
+
+/* =========================================================
+   D'ARBY REACTIVE SPRITE FX
+   ========================================================= */
+/* SMUG / GREEDY: subtle breathing bob & gold aura */
+@keyframes darbyBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.darby-fx-smug {
+  animation: darbyBob 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(234, 179, 8, 0.6)) drop-shadow(0 0 45px rgba(234, 179, 8, 0.3));
+}
+
+/* PARANOID: rapid horizontal jitter, sweat particles & menacing kanji */
+@keyframes darbyJitter {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 1px); }
+  40% { transform: translate(4px, -1px); }
+  60% { transform: translate(-3px, -1px); }
+  80% { transform: translate(3px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.darby-fx-paranoid {
+  animation: darbyJitter 0.1s infinite;
+  filter: drop-shadow(0 0 22px rgba(225, 29, 72, 0.7)) drop-shadow(0 0 35px rgba(147, 51, 234, 0.6));
+}
+
+/* CATATONIC: grayscale, white-hair tint, violent trembling */
+@keyframes darbyViolentTremble {
+  0% { transform: translate(0, 0) scale(0.98); }
+  25% { transform: translate(-6px, 2px) scale(0.98); }
+  50% { transform: translate(5px, -3px) scale(0.98); }
+  75% { transform: translate(-4px, -2px) scale(0.98); }
+  100% { transform: translate(6px, 2px) scale(0.98); }
+}
+
+.darby-fx-catatonic {
+  animation: darbyViolentTremble 0.07s infinite;
+  filter: grayscale(100%) contrast(180%) brightness(120%) drop-shadow(0 0 30px rgba(255, 255, 255, 0.75));
+}
+
+/* Floating Menacing Kanji (ゴゴゴ) */
+@keyframes menaceFloatAnim {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.6) rotate(-8deg);
+  }
+  30% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-80px) scale(1.3) rotate(12deg);
+  }
+}
+
+.menace-kanji {
+  animation: menaceFloatAnim 2s infinite ease-out;
+}
+
+/* Sweat Droplets */
+@keyframes sweatDropAnim {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(35px) scale(1.1);
+  }
+}
+
+.sweat-drop {
+  animation: sweatDropAnim 1.2s infinite ease-in;
+}
+
+/* =========================================================
+   CLASSIC ARCADE HEALTH-BAR GAUGES
+   ========================================================= */
+.arcade-gauge-bezel {
+  border: 3px solid #000;
+  box-shadow: 3px 3px 0 #000, inset 0 2px 4px rgba(0, 0, 0, 0.9);
+  background: #090310;
+  position: relative;
+  overflow: hidden;
+}
+
+.arcade-gauge-segments {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 8px,
+    rgba(0, 0, 0, 0.5) 8px,
+    rgba(0, 0, 0, 0.5) 10px
+  );
+  pointer-events: none;
+}
+
+/* =========================================================
+   MANGA SPEED LINES & ANIME CUT-IN
+   ========================================================= */
+@keyframes speedlinesPan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 400px 200px;
+  }
+}
+
+.manga-speedlines {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.12) 0px,
+    rgba(255, 255, 255, 0.12) 2px,
+    transparent 2px,
+    transparent 12px
+  );
+  animation: speedlinesPan 0.35s linear infinite;
+}
+
+/* Diagonal Manga Sash */
+.clip-diagonal-sash {
+  clip-path: polygon(0 0, 100% 5%, 100% 95%, 0 100%);
+}
+
+.clip-diagonal-badge {
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0% 100%);
+}
+
+/* JoJo Stand Aura */
+@keyframes standAura {
+  0% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4), inset 0 0 10px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(234, 179, 8, 0.65), inset 0 0 15px rgba(234, 179, 8, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4), inset 0 0 10px rgba(168, 85, 247, 0.2);
+  }
+}
+
+.stand-aura {
+  animation: standAura 2.2s infinite alternate ease-in-out;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090310;
+}
+::-webkit-scrollbar-thumb {
+  background: #4a1d96;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #eab308;
+}
+
+/* =========================================================
+   CIRCULAR SOUL CHIP — D'ARBY ANIME CHIP TEXTURES
+   ========================================================= */
+.soul-chip-darby {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.18), 3px 3px 0 #000;
+  border: 2px solid #000;
+}
+
+.soul-chip-darby img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  /* Scale up to crop out the green felt background corners */
+  transform: scale(1.28);
+  clip-path: circle(50% at 50% 50%);
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Jotaro plain chip — solid casino token with dashed inner rim */
+.soul-chip-jotaro {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #b45309, #78350f);
+  border: 2px solid #000;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.7), inset 0 0 0 5px rgba(0,0,0,0.35), 2px 2px 0 #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fef3c7;
+  font-size: 9px;
+  font-weight: 900;
+  outline: 3px dashed rgba(251,191,36,0.6);
+  outline-offset: -6px;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   STAR PLATINUM REPORT POPUP ANIMATION
+   ========================================================= */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.sp-report-slide-in {
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Fixed-height arcade composition for a standard 100% browser zoom. */
+.game-shell {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 42px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.game-header {
+  height: 42px;
+  min-height: 42px;
+  padding-inline: clamp(8px, 1.2vw, 22px);
+  position: relative;
+}
+
+.game-main {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0 clamp(6px, 1vw, 16px);
+  display: grid;
+  grid-template-rows:
+    minmax(0, 36vh)
+    minmax(0, 33vh)
+    minmax(0, 27vh);
+  align-content: space-between;
+  gap: 0;
+}
+
+.opponent-area,
+.table-area,
+.player-area {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.opponent-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 27vw, 330px);
+  padding: 2px clamp(4px, 1vw, 16px) 0;
+  gap: clamp(4px, 0.8vw, 14px);
+  align-items: start;
+}
+
+.opponent-area > div {
+  min-width: 0;
+}
+
+.opponent-dialogue {
+  grid-column: 1;
+}
+
+.opponent-portrait {
+  position: absolute !important;
+  top: clamp(18px, 3vh, 32px);
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.opponent-dialogue {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.opponent-sidebar {
+  grid-column: 2;
+  justify-self: end;
+  width: 100%;
+  margin-top: clamp(18px, 3vh, 32px);
+  display: flex;
+  height: auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: clamp(3px, 0.5vh, 7px);
+}
+
+.opponent-area img[src="/assets/darby-seated.png"] {
+  width: auto;
+  height: clamp(150px, 32vh, 345px);
+  max-height: 34vh;
+  max-width: 25vw;
+}
+
+.darby-hud {
+  width: 100%;
+  min-height: 0;
+  padding: clamp(8px, 0.9vh, 12px);
+  border-width: 2px;
+  border-radius: 10px;
+  line-height: 1.1;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.darby-hud .arcade-gauge-bezel {
+  height: clamp(14px, 1.6vh, 18px);
+}
+
+.darby-hud .font-vt323.text-base {
+  font-size: clamp(14px, 1.5vh, 17px);
+  line-height: 1.05;
+}
+
+.darby-hud .space-y-1 > * {
+  margin-block-end: 0;
+}
+
+.darby-hud .space-y-1 > :not(:first-child) {
+  margin-block-start: 4px;
+}
+
+.darby-hud > * {
+  margin-block-end: 0;
+}
+
+.darby-hud > :not(:first-child) {
+  margin-block-start: clamp(4px, 0.6vh, 7px);
+}
+
+.jotaro-bank-sidebar {
+  position: absolute;
+  right: clamp(0px, 0.5vw, 8px);
+  bottom: clamp(3px, 0.6vh, 8px);
+  z-index: 30;
+  width: clamp(210px, 17vw, 280px);
+  max-height: calc(100% - 6px);
+  overflow: auto;
+  min-height: clamp(88px, 10vh, 112px);
+  padding: clamp(8px, 0.9vh, 12px);
+  border: 2px solid rgba(126, 34, 206, 0.9);
+  border-radius: 10px;
+  background: rgba(14, 7, 28, 0.97);
+  box-shadow: 0 0 16px rgba(126, 34, 206, 0.25);
+  color: #e9d5ff;
+  line-height: 1.1;
+}
+
+.jotaro-bank-title {
+  margin-bottom: 7px;
+  border-bottom: 1px solid rgba(107, 33, 168, 0.7);
+  padding-bottom: 5px;
+  color: #fcd34d;
+  font: clamp(7px, 0.8vh, 9px) 'Press Start 2P', monospace;
+  letter-spacing: 0.02em;
+}
+
+.jotaro-bank-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  color: #c4b5fd;
+  font: clamp(6px, 0.7vh, 8px) 'Press Start 2P', monospace;
+}
+
+.jotaro-bank-count strong {
+  color: #fcd34d;
+  font-size: clamp(7px, 0.8vh, 9px);
+  white-space: nowrap;
+}
+
+.wagerable-chip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.wagerable-chip-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.wagerable-chip-label,
+.wagerable-chip-count {
+  color: #cbd5e1;
+  font: clamp(6px, 0.65vh, 7px) 'Press Start 2P', monospace;
+  flex-shrink: 0;
+}
+
+.wagerable-chip-label {
+  width: 56px;
+  overflow: hidden;
+}
+
+.wagerable-chip-icons {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.wagerable-chip {
+  display: inline-flex;
+  width: clamp(14px, 1.8vh, 19px);
+  height: clamp(14px, 1.8vh, 19px);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px #000;
+  color: white;
+  font: 7px 'Press Start 2P', monospace;
+  flex-shrink: 0;
+}
+
+.wagerable-chip-jotaro {
+  color: #fff3c4;
+  background: radial-gradient(circle at 35% 30%, #fbbf24, #92400e);
+}
+
+.wagerable-chip-avdol {
+  background: radial-gradient(circle at 35% 30%, #fb923c, #9a3412);
+}
+
+.wagerable-chip-kakyoin {
+  background: radial-gradient(circle at 35% 30%, #34d399, #065f46);
+}
+
+.wagerable-chip-holly {
+  color: #3b0764;
+  background: radial-gradient(circle at 35% 30%, #f9a8d4, #fbbf24);
+}
+
+.jotaro-liberated-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  margin-top: 7px;
+  border-top: 1px solid rgba(251, 191, 36, 0.55);
+  padding-top: 6px;
+}
+
+.jotaro-liberated-label {
+  color: #fde68a;
+  font: 5px 'Press Start 2P', monospace;
+  line-height: 1.45;
+}
+
+.jotaro-liberated-icons,
+.jotaro-liberated-group,
+.jotaro-liberated-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.jotaro-liberated-icons {
+  gap: 4px;
+  color: #e2e8f0;
+  font: 6px 'Press Start 2P', monospace;
+  white-space: nowrap;
+}
+
+.jotaro-liberated-group {
+  gap: 2px;
+}
+
+.jotaro-liberated-stack {
+  gap: 1px;
+}
+
+.recovered-soul-chip {
+  width: clamp(14px, 1.8vh, 19px);
+  height: clamp(14px, 1.8vh, 19px);
+  border-width: 1px;
+}
+
+.recovered-soul-chip img {
+  transform: scale(1.25);
+}
+
+.darby-cut-in-portrait {
+  width: clamp(64px, 9vh, 84px);
+  height: clamp(64px, 9vh, 84px);
+  overflow: hidden;
+  border: 4px solid #fda4af;
+  border-radius: 50%;
+  background-image: url('/assets/darby-portrait.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.darby-hud .soul-chip-darby {
+  width: clamp(16px, 2vh, 20px);
+  height: clamp(16px, 2vh, 20px);
+}
+
+.perspective-stage,
+.table-area {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+.table-area {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, calc(100% - clamp(455px, 37vw, 550px) - 20px))
+    minmax(0, 1fr);
+  align-items: center;
+}
+
+.neutral-dealer-sidebar {
+  grid-column: 1;
+  justify-self: end;
+  position: relative;
+  z-index: 20;
+  width: max-content;
+  max-width: 100%;
+  margin-right: clamp(4px, 0.6vw, 10px);
+  transform: translateY(clamp(-6px, -0.8vh, -3px));
+}
+
+.neutral-dealer-portrait {
+  width: clamp(44px, 4.7vw, 64px);
+  height: clamp(44px, 4.7vw, 64px);
+  flex-shrink: 0;
+}
+
+.neutral-dealer-badge {
+  max-width: 100%;
+  border: 2px solid rgba(251, 191, 36, 0.75);
+  background: rgba(0, 0, 0, 0.92);
+  box-shadow: 2px 2px 0 #000;
+  white-space: normal;
+}
+
+.perspective-stage {
+  perspective: 1000px;
+}
+
+.fpv-table {
+  grid-column: 2;
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  max-height: 100%;
+  padding: clamp(5px, 0.8vh, 12px);
+  border-width: clamp(6px, 0.9vw, 12px);
+  transform: rotateX(20deg);
+  border-radius: clamp(28px, 5vw, 72px) / clamp(22px, 4vh, 52px);
+}
+
+.felt-gold-ring {
+  inset: clamp(10px, 2vh, 22px);
+}
+
+.fpv-table .card-3d-wrapper {
+  width: clamp(34px, 5vh, 64px);
+  height: clamp(48px, 7vh, 88px);
+  flex-shrink: 0;
+}
+
+.fpv-table > .relative {
+  min-height: 0;
+}
+
+.soul-pot {
+  padding: 0;
+}
+
+.fpv-table .soul-pot.card-3d-wrapper {
+  width: auto;
+  height: auto;
+}
+
+.soul-pot-chips {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  align-content: center;
+  justify-items: center;
+  width: clamp(190px, 30vw, 360px);
+  overflow: visible;
+  padding: 2px;
+}
+
+.soul-pot-chip {
+  width: clamp(16px, 2.2vh, 24px);
+  height: clamp(16px, 2.2vh, 24px);
+  min-width: 0;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.soul-pot-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.soul-chip-jotaro.soul-chip-avdol {
+  background: radial-gradient(circle at 35% 30%, #fb923c, #9a3412);
+  outline-color: rgba(251, 146, 60, 0.75);
+}
+
+.soul-chip-jotaro.soul-chip-kakyoin {
+  background: radial-gradient(circle at 35% 30%, #34d399, #065f46);
+  outline-color: rgba(52, 211, 153, 0.75);
+}
+
+.soul-chip-jotaro.soul-chip-holly {
+  color: #3b0764;
+  background: radial-gradient(circle at 35% 30%, #f9a8d4, #fbbf24);
+  outline-color: rgba(249, 168, 212, 0.8);
+}
+
+.player-area {
+  padding: clamp(5px, 0.8vh, 10px);
+  border-width: 2px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(3px, 0.6vh, 8px);
+}
+
+.player-area > * {
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+.player-status {
+  min-height: 0;
+  gap: clamp(4px, 0.7vh, 9px);
+  padding-bottom: clamp(3px, 0.6vh, 8px);
+}
+
+.player-identity {
+  max-width: 100%;
+}
+
+.player-portrait {
+  width: clamp(36px, 5.2vh, 56px);
+  height: clamp(36px, 5.2vh, 56px);
+  flex-shrink: 0;
+}
+
+.player-chip-bank {
+  flex-shrink: 0;
+  max-width: min(34vw, 360px);
+}
+
+.player-bank-chip {
+  width: clamp(17px, 2.4vh, 25px);
+  height: clamp(17px, 2.4vh, 25px);
+  font-size: 7px;
+  outline-width: 2px;
+  outline-offset: -4px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), inset 0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.player-collateral-chip {
+  background: radial-gradient(circle at 40% 35%, #c4b5fd, #6d28d9);
+  color: #fff;
+  outline-color: rgba(196, 181, 253, 0.75);
+}
+
+.player-area > .flex.items-center.justify-start {
+  min-height: 0;
+  max-height: 4.5vh;
+  overflow: hidden;
+}
+
+.player-area .dio-demand-button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: clamp(7px, 0.85vh, 9px);
+}
+
+.dio-confrontation {
+  background:
+    radial-gradient(ellipse at 75% 40%, rgba(111, 32, 170, 0.62), transparent 55%),
+    linear-gradient(110deg, rgba(6, 14, 38, 0.96), rgba(15, 3, 25, 0.9));
+  animation: dioConfrontationEnter 0.24s ease-out both;
+}
+
+.dio-confrontation-dio {
+  filter: drop-shadow(0 0 28px rgba(234, 179, 8, 0.75));
+  mix-blend-mode: screen;
+}
+
+.dio-confrontation-speedlines {
+  opacity: 0.68;
+  background:
+    repeating-conic-gradient(from 6deg at 78% 45%, transparent 0deg 5deg, rgba(234, 179, 8, 0.33) 5.2deg 5.6deg, transparent 6deg 11deg),
+    repeating-conic-gradient(from 185deg at 24% 52%, transparent 0deg 8deg, rgba(168, 85, 247, 0.28) 8.2deg 8.7deg, transparent 9deg 15deg);
+  mask-image: radial-gradient(ellipse at center, transparent 0%, #000 72%);
+}
+
+.dio-confrontation-kanji {
+  overflow: hidden;
+  color: rgba(250, 204, 21, 0.54);
+  font-family: serif;
+  font-weight: 900;
+  font-size: clamp(38px, 9vw, 118px);
+  text-shadow: 0 0 18px rgba(168, 85, 247, 0.95), 4px 4px #090311;
+}
+
+.dio-confrontation-kanji span {
+  position: absolute;
+  animation: menaceFloatAnim 2.1s infinite ease-out;
+}
+
+.dio-confrontation-kanji span:nth-child(1) {
+  left: 8%;
+  top: 18%;
+}
+
+.dio-confrontation-kanji span:nth-child(2) {
+  right: 7%;
+  top: 12%;
+  animation-delay: 0.6s;
+}
+
+.dio-confrontation-kanji span:nth-child(3) {
+  right: 12%;
+  bottom: 8%;
+  animation-delay: 1.1s;
+}
+
+.dio-accusation-banner,
+.dio-counter-banner {
+  transform: skewY(-2deg);
+  animation: dioBannerImpact 0.32s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+.dio-counter-banner {
+  animation-delay: 0.1s;
+}
+
+.dio-counter-success {
+  border-color: #34d399;
+  box-shadow: 0 0 45px rgba(52, 211, 153, 0.55);
+}
+
+.match-result-overlay {
+  background: radial-gradient(ellipse at center, rgba(14, 7, 28, 0.82), rgba(0, 0, 0, 0.97));
+  backdrop-filter: blur(12px);
+  animation: dioConfrontationEnter 0.35s ease-out both;
+}
+
+.match-victory > div {
+  border-color: #fbbf24;
+}
+
+.match-defeat > div {
+  border-color: #fb7185;
+  box-shadow: 0 0 70px rgba(244, 63, 94, 0.45);
+}
+
+@keyframes dioConfrontationEnter {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dioBannerImpact {
+  from { opacity: 0; transform: translateX(-8vw) skewY(-2deg) scale(0.92); }
+  to { opacity: 1; transform: translateX(0) skewY(-2deg) scale(1); }
+}
+
+@media (max-height: 700px) {
+  .game-main {
+    grid-template-rows: minmax(0, 36fr) minmax(0, 33fr) minmax(0, 27fr);
+  }
+
+  .opponent-area img[src="/assets/darby-seated.png"] {
+    height: 30vh;
+  }
+}
+
+@media (max-width: 900px) {
+  .opponent-area {
+    grid-template-columns: minmax(0, 1fr) minmax(245px, 31vw);
+  }
+
+  .table-area {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, calc(100% - clamp(170px, 25vw, 220px) - clamp(170px, 25vw, 220px)))
+      minmax(0, 1fr);
+  }
+
+  .fpv-table {
+    width: 100%;
+  }
+
+  .jotaro-bank-sidebar {
+    width: min(100%, clamp(150px, 23vw, 200px));
+    min-height: clamp(80px, 10vh, 100px);
+  }
+}
+
+@media (max-width: 680px) {
+  .opponent-area {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 44vw);
+  }
+
+  .opponent-portrait {
+    display: none;
+  }
+}

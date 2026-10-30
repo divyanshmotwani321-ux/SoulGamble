@@ -1,0 +1,3963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUL GAMBLE: THE D'ARBY SHOWDOWN — Data Structures Game</title>
+  <style>
+    /* ==========================================================================
+       1. CSS DESIGN TOKENS & RESET (Zero External Dependencies)
+       ========================================================================== */
+    :root {
+      --bg-dark: #090710;
+      --bg-panel: #141022;
+      --bg-panel-alt: #1d1732;
+      --felt-dark: #07291c;
+      --felt-mid: #0c442e;
+      --felt-light: #136142;
+      --gold: #f5c542;
+      --gold-dim: #b38822;
+      --purple-stand: #b845ff;
+      --purple-glow: rgba(184, 69, 255, 0.55);
+      --crimson: #e63946;
+      --emerald: #2ec4b6;
+      --cyan-soul: #38bdf8;
+      --amber-soul: #fb923c;
+      --text-main: #f8f5ff;
+      --text-muted: #b5acc9;
+      --border-gold: 1px solid rgba(245, 197, 66, 0.42);
+      --border-purple: 1px solid rgba(184, 69, 255, 0.5);
+      --shadow-heavy: 0 12px 32px rgba(0, 0, 0, 0.75);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --font-sans: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-display: Impact, 'Arial Black', 'Trebuchet MS', sans-serif;
+      --font-mono: Consolas, 'Courier New', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 25%, #1e1233 0%, #090710 80%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+    }
+
+    /* Subtle anime speed-line / vignette backdrop */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.72) 100%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0px, rgba(255, 255, 255, 0.012) 1px, transparent 1px, transparent 36px);
+      z-index: 0;
+    }
+
+    /* ==========================================================================
+       2. TOP NAVIGATION & HUD BAR
+       ========================================================================== */
+    .top-bar {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px 18px;
+      background: linear-gradient(180deg, rgba(20, 16, 34, 0.98), rgba(12, 9, 22, 0.92));
+      border-bottom: 2px solid var(--gold-dim);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--purple-stand), #3a0ca3);
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--gold);
+      box-shadow: 0 0 12px var(--purple-glow);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      letter-spacing: 1.5px;
+      color: var(--gold);
+      text-shadow: 2px 2px 0 #000, 0 0 12px rgba(245, 197, 66, 0.4);
+    }
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .phase-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(184, 69, 255, 0.16);
+      border: var(--border-purple);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #e6b8ff;
+    }
+
+    .phase-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      animation: pulseDot 1.6s infinite;
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hud-btn {
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      background: linear-gradient(180deg, #271f42, #151026);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-btn:hover {
+      border-color: var(--gold);
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(245, 197, 66, 0.35);
+    }
+
+    .hud-btn.active-toggle {
+      background: linear-gradient(180deg, #5e1ca8, #350d63);
+      border-color: var(--purple-stand);
+      box-shadow: 0 0 12px var(--purple-glow);
+    }
+
+    .badge-count {
+      background: var(--gold);
+      color: #000;
+      font-weight: 900;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+    }
+
+    /* ==========================================================================
+       3. MAIN ARENA GRID LAYOUT
+       ========================================================================== */
+    .arena-wrapper {
+      position: relative;
+      z-index: 5;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 10px 14px 18px;
+      display: grid;
+      grid-template-columns: 280px 1fr 290px;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 1120px) {
+      .arena-wrapper {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ==========================================================================
+       4. LEFT & RIGHT CHARACTER COLUMNS (Jotaro, Avdol, Notes / D'Arby, Souls)
+       ========================================================================== */
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-card {
+      background: linear-gradient(165deg, rgba(29, 23, 50, 0.95), rgba(14, 11, 26, 0.96));
+      border: var(--border-gold);
+      border-radius: var(--radius-md);
+      padding: 11px 12px;
+      box-shadow: var(--shadow-heavy);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      letter-spacing: 1px;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .char-profile {
+      display: flex;
+      gap: 11px;
+      align-items: center;
+    }
+
+    .avatar-frame {
+      width: 68px;
+      height: 68px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--gold);
+      background: radial-gradient(circle at 50% 30%, #3a2366, #110b22);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+    }
+
+    .avatar-frame.jotaro-frame {
+      border-color: var(--purple-stand);
+      box-shadow: 0 0 14px rgba(184, 69, 255, 0.4);
+    }
+
+    .avatar-frame.darby-frame {
+      border-color: var(--gold);
+      box-shadow: 0 0 14px rgba(245, 197, 66, 0.35);
+    }
+
+    .char-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .char-name {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .char-role {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .stat-pill-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .stat-pill.gold {
+      color: var(--gold);
+      border-color: rgba(245, 197, 66, 0.45);
+    }
+
+    /* Star Platinum Stand Box */
+    .stand-panel {
+      background: linear-gradient(155deg, rgba(55, 16, 94, 0.92), rgba(20, 10, 38, 0.96));
+      border: 1px solid var(--purple-stand);
+      box-shadow: 0 0 20px rgba(184, 69, 255, 0.25);
+    }
+
+    .stand-btn {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border-radius: var(--radius-sm);
+      border: 2px solid #e0aaff;
+      background: linear-gradient(135deg, #9d4edd 0%, #5a189a 100%);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 0 16px var(--purple-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .stand-btn:hover:not(:disabled) {
+      transform: scale(1.02);
+      box-shadow: 0 0 24px rgba(224, 170, 255, 0.85);
+      background: linear-gradient(135deg, #b565f7 0%, #7b2cbf 100%);
+    }
+
+    .stand-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+      border-color: rgba(255,255,255,0.2);
+      background: #2a2139;
+    }
+
+    .stand-btn.window-ready {
+      animation: standPulse 0.55s infinite alternate;
+    }
+
+    @keyframes standPulse {
+      from { box-shadow: 0 0 12px #e0aaff, 0 0 22px var(--purple-stand); transform: scale(1); }
+      to { box-shadow: 0 0 24px #fff, 0 0 38px var(--purple-stand); transform: scale(1.03); }
+    }
+
+    .charges-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      margin-top: 6px;
+      color: #e6ccff;
+    }
+
+    .charge-orbs {
+      display: flex;
+      gap: 5px;
+    }
+
+    .charge-orb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #332447;
+      border: 1px solid #9d4edd;
+    }
+
+    .charge-orb.filled {
+      background: #e0aaff;
+      box-shadow: 0 0 8px #e0aaff;
+    }
+
+    /* Avdol Adviser Box */
+    .avdol-btn {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 7px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--amber-soul);
+      background: linear-gradient(135deg, #9a3412, #431407);
+      color: #ffedd5;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .avdol-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #c2410c, #7c2d12);
+      box-shadow: 0 0 12px rgba(251, 146, 60, 0.5);
+    }
+
+    .avdol-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .avdol-quote {
+      margin-top: 7px;
+      padding: 7px 9px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 3px solid var(--amber-soul);
+      font-size: 0.76rem;
+      line-height: 1.38;
+      color: #fde68a;
+      min-height: 46px;
+    }
+
+    /* Persistent Evidence / Jotaro's Notes Box */
+    .notes-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note-entry {
+      background: rgba(184, 69, 255, 0.12);
+      border: 1px solid rgba(184, 69, 255, 0.5);
+      border-radius: var(--radius-sm);
+      padding: 8px 9px;
+      font-size: 0.74rem;
+      line-height: 1.4;
+      color: #f3e8ff;
+    }
+
+    .note-entry-title {
+      font-weight: 900;
+      color: var(--gold);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .note-empty {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-style: italic;
+      padding: 8px 4px;
+    }
+
+    /* D'Arby Confidence & Psychological State */
+    .meter-container {
+      margin-top: 8px;
+    }
+
+    .meter-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .psych-badge {
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+    }
+
+    .psych-CALM { background: #065f46; color: #a7f3d0; }
+    .psych-UNEASY { background: #92400e; color: #fde68a; }
+    .psych-SHAKEN { background: #991b1b; color: #fecaca; }
+    .psych-DESPERATE { background: #581c87; color: #f5d0fe; animation: pulseDot 0.6s infinite; }
+
+    .meter-track {
+      width: 100%;
+      height: 11px;
+      background: #0d0a18;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 85%;
+      background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+      transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Soul Chips Visual Cards */
+    .soul-chips-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .soul-chip-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      transition: all 0.35s ease;
+    }
+
+    .soul-chip-item.status-HELD {
+      border-color: rgba(230, 57, 70, 0.6);
+      background: linear-gradient(90deg, rgba(230, 57, 70, 0.15), rgba(0, 0, 0, 0.5));
+    }
+
+    .soul-chip-item.status-STAKE {
+      border-color: var(--gold);
+      background: linear-gradient(90deg, rgba(245, 197, 66, 0.24), rgba(0, 0, 0, 0.5));
+      box-shadow: 0 0 15px rgba(245, 197, 66, 0.35);
+      transform: scale(1.02);
+    }
+
+    .soul-chip-item.status-RECOVERED {
+      border-color: var(--emerald);
+      background: linear-gradient(90deg, rgba(46, 196, 182, 0.22), rgba(0, 0, 0, 0.5));
+      box-shadow: 0 0 12px rgba(46, 196, 182, 0.3);
+    }
+
+    .soul-token-disc {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px dashed #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      color: #fff;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: 0 0 12px rgba(0,0,0,0.6);
+    }
+
+    .soul-token-disc.joseph-disc {
+      background: radial-gradient(circle, #7c3aed, #3b0764);
+      border-color: #ddd6fe;
+      box-shadow: 0 0 12px rgba(124, 58, 237, 0.7);
+    }
+
+    .soul-token-disc.polnareff-disc {
+      background: radial-gradient(circle, #0284c7, #082f49);
+      border-color: #bae6fd;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+    }
+
+    .soul-info {
+      flex: 1;
+    }
+
+    .soul-name {
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: #fff;
+    }
+
+    .soul-status-tag {
+      display: inline-block;
+      margin-top: 2px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.66rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-HELD { background: rgba(230, 57, 70, 0.25); color: #fca5a5; }
+    .tag-STAKE { background: rgba(245, 197, 66, 0.3); color: var(--gold); }
+    .tag-RECOVERED { background: rgba(46, 196, 182, 0.28); color: #5eead4; }
+
+    /* ==========================================================================
+       5. CENTER POKER TABLE & FELT ARENA
+       ========================================================================== */
+    .table-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 620px;
+    }
+
+    .felt-table {
+      flex: 1;
+      background:
+        radial-gradient(ellipse at 50% 50%, var(--felt-light) 0%, var(--felt-mid) 52%, var(--felt-dark) 100%);
+      border: 6px solid #3d2516;
+      outline: 2px solid var(--gold);
+      border-radius: 26px;
+      padding: 14px 18px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.75),
+        0 14px 36px rgba(0, 0, 0, 0.85);
+      overflow: hidden;
+    }
+
+    /* Inner gold felt line */
+    .felt-table::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(245, 197, 66, 0.26);
+      border-radius: 18px;
+      pointer-events: none;
+    }
+
+    /* Dealer Boy & Deck Bar at Top of Felt */
+    .dealer-zone {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.42);
+      border: 1px solid rgba(245, 197, 66, 0.3);
+      border-radius: var(--radius-md);
+      padding: 7px 12px;
+      gap: 10px;
+    }
+
+    .dealer-badge {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .dealer-mini-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      background: #1f1930;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .dealer-text-group {
+      font-size: 0.76rem;
+    }
+
+    .dealer-label {
+      color: var(--gold);
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .deck-visual-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .deck-stack {
+      width: 40px;
+      height: 54px;
+      border-radius: 5px;
+      background: repeating-linear-gradient(135deg, #3b0764, #3b0764 4px, #6d28d9 4px, #6d28d9 8px);
+      border: 2px solid var(--gold);
+      box-shadow: 3px 3px 0 #1e1b4b, 5px 5px 10px rgba(0,0,0,0.7);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.72rem;
+      color: var(--gold);
+    }
+
+    .deck-stack.cheating-motion {
+      animation: cheatSlide 0.42s infinite alternate;
+      border-color: var(--crimson);
+      box-shadow: 0 0 18px rgba(230, 57, 70, 0.9);
+    }
+
+    @keyframes cheatSlide {
+      from { transform: translateY(0) rotate(0deg); }
+      to { transform: translateY(5px) rotate(-6deg); }
+    }
+
+    /* Hand Rows (D'Arby Top, Center Pot, Jotaro Bottom) */
+    .hand-zone {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0;
+    }
+
+    .hand-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #e2e8f0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .hand-rank-badge {
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .cards-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 112px;
+      flex-wrap: wrap;
+    }
+
+    /* Playing Card Component */
+    .playing-card {
+      width: 74px;
+      height: 106px;
+      border-radius: 8px;
+      background: linear-gradient(160deg, #ffffff 0%, #f1f5f9 100%);
+      border: 2px solid #cbd5e1;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px;
+      color: #0f172a;
+      font-weight: 800;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+      cursor: pointer;
+      animation: dealCardIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes dealCardIn {
+      from { opacity: 0; transform: translateY(-28px) scale(0.8); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .playing-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+    }
+
+    .playing-card.selected-discard {
+      transform: translateY(-10px);
+      border-color: var(--purple-stand);
+      box-shadow: 0 0 16px var(--purple-glow);
+    }
+
+    .playing-card.red-suit {
+      color: #dc2626;
+    }
+
+    .playing-card.black-suit {
+      color: #0f172a;
+    }
+
+    .playing-card.face-down {
+      background:
+        radial-gradient(circle at 50% 50%, #f5c542 0%, #f5c542 14%, transparent 15%),
+        repeating-linear-gradient(45deg, #2e1065 0px, #2e1065 6px, #4c1d95 6px, #4c1d95 12px);
+      border: 2px solid var(--gold);
+      color: var(--gold);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .playing-card.face-down::after {
+      content: "★";
+      font-size: 1.5rem;
+      color: var(--gold);
+      text-shadow: 0 0 8px #000;
+    }
+
+    .playing-card.audience-xray {
+      border: 2px solid var(--crimson);
+      box-shadow: 0 0 16px rgba(230, 57, 70, 0.65);
+    }
+
+    .xray-ribbon {
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--crimson);
+      color: #fff;
+      font-size: 0.56rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+    }
+
+    .card-corner-top {
+      font-size: 0.85rem;
+      line-height: 1;
+      text-align: left;
+    }
+
+    .card-center-suit {
+      font-size: 1.85rem;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .card-corner-bottom {
+      font-size: 0.85rem;
+      line-height: 1;
+      text-align: right;
+      transform: rotate(180deg);
+    }
+
+    /* Center Table Pot, Active Stakes & Timing Window Bar */
+    .table-center-hub {
+      position: relative;
+      z-index: 3;
+      margin: 4px auto;
+      width: 100%;
+      max-width: 580px;
+      background: rgba(7, 22, 15, 0.78);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    .pot-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .pot-metric {
+      text-align: center;
+    }
+
+    .pot-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .pot-value {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .active-stake-banner {
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(245, 197, 66, 0.16);
+      border: 1px solid var(--gold);
+      color: #fef08a;
+      font-size: 0.76rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Timing Gauge Bar (Used for Opening Cheat Detection & Final Stand Stunt) */
+    .timing-gauge-wrapper {
+      width: 100%;
+      background: rgba(15, 10, 28, 0.92);
+      border: 1px solid var(--purple-stand);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: none;
+    }
+
+    .timing-gauge-wrapper.visible {
+      display: block;
+    }
+
+    .timing-title-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: #f3e8ff;
+      margin-bottom: 5px;
+    }
+
+    .timing-bar-outer {
+      position: relative;
+      width: 100%;
+      height: 18px;
+      background: #1f1635;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .timing-sweet-spot {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 43%;
+      width: 33%;
+      background: linear-gradient(90deg, rgba(184, 69, 255, 0.35), rgba(245, 197, 66, 0.75), rgba(184, 69, 255, 0.35));
+      border-left: 2px solid var(--gold);
+      border-right: 2px solid var(--gold);
+    }
+
+    .timing-cursor {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: #fff;
+      box-shadow: 0 0 10px #fff, 0 0 16px var(--purple-stand);
+      left: 0%;
+    }
+
+    /* QTE Overlay Box Inside Table */
+    .qte-alert-box {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(88, 28, 135, 0.95));
+      border: 2px solid var(--gold);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      text-align: center;
+      display: none;
+      animation: standPulse 0.4s infinite alternate;
+    }
+
+    .qte-alert-box.visible {
+      display: block;
+    }
+
+    .qte-btn {
+      margin-top: 8px;
+      padding: 10px 24px;
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      letter-spacing: 1.5px;
+      background: var(--gold);
+      color: #000;
+      border: 2px solid #fff;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(245, 197, 66, 0.9);
+    }
+
+    .qte-timer-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 999px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .qte-timer-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--gold);
+      transition: width 0.05s linear;
+    }
+
+    /* ==========================================================================
+       6. DIALOGUE STAGE & PLAYER ACTION CONTROLS
+       ========================================================================== */
+    .dialogue-box {
+      background: linear-gradient(180deg, rgba(22, 17, 38, 0.96), rgba(11, 8, 20, 0.98));
+      border: 1px solid rgba(245, 197, 66, 0.5);
+      border-radius: var(--radius-md);
+      padding: 11px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: var(--shadow-heavy);
+    }
+
+    .speaker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .speaker-tag {
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      letter-spacing: 1px;
+      color: var(--gold);
+      padding: 2px 10px;
+      border-radius: 4px;
+      background: rgba(245, 197, 66, 0.14);
+      border-left: 3px solid var(--gold);
+    }
+
+    .dialogue-text {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: #f8fafc;
+      min-height: 42px;
+    }
+
+    .action-bar {
+      background: linear-gradient(180deg, rgba(29, 23, 50, 0.96), rgba(16, 12, 28, 0.98));
+      border: var(--border-gold);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-heavy);
+    }
+
+    .consequence-preview {
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 5px 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--purple-stand);
+    }
+
+    .action-buttons-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .act-btn {
+      padding: 9px 15px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(245, 197, 66, 0.5);
+      background: linear-gradient(180deg, #2e244d, #19132b);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex: 1 1 auto;
+      text-align: center;
+    }
+
+    .act-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+      box-shadow: 0 4px 14px rgba(245, 197, 66, 0.3);
+    }
+
+    .act-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .act-btn.primary {
+      background: linear-gradient(135deg, #d97706, #92400e);
+      border-color: var(--gold);
+    }
+
+    .act-btn.bluff-special {
+      background: linear-gradient(135deg, #7e22ce, #3b0764);
+      border-color: #e9d5ff;
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.5);
+    }
+
+    .act-btn.danger {
+      background: linear-gradient(135deg, #991b1b, #450a0a);
+      border-color: #f87171;
+    }
+
+    /* ==========================================================================
+       7. MODALS (EVIDENCE TUTORIAL, INTRO, VICTORY/DEFEAT, DATA STRUCTURES)
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(5, 3, 12, 0.86);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-window {
+      width: 100%;
+      max-width: 760px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: linear-gradient(165deg, #1d1633 0%, #0d091a 100%);
+      border: 2px solid var(--gold);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(184, 69, 255, 0.35);
+      color: var(--text-main);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      letter-spacing: 1.5px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .diagram-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    @media (max-width: 680px) {
+      .diagram-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diagram-card {
+      background: rgba(0, 0, 0, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px;
+    }
+
+    .diagram-card.cheat-highlight {
+      border-color: var(--crimson);
+      box-shadow: 0 0 18px rgba(230, 57, 70, 0.35);
+    }
+
+    .exact-evidence-quote {
+      background: rgba(184, 69, 255, 0.16);
+      border: 2px solid var(--purple-stand);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 0.88rem;
+      line-height: 1.48;
+      font-weight: 700;
+      color: #f3e8ff;
+      margin: 12px 0;
+    }
+
+    /* Data Structures Inspector Drawer */
+    .ds-inspector-drawer {
+      position: fixed;
+      top: 58px;
+      right: 14px;
+      bottom: 14px;
+      width: 400px;
+      max-width: calc(100vw - 28px);
+      z-index: 60;
+      background: rgba(12, 9, 24, 0.97);
+      border: 2px solid var(--purple-stand);
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+      padding: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+    }
+
+    .ds-inspector-drawer.open {
+      display: flex;
+    }
+
+    .ds-block {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 0.74rem;
+    }
+
+    .ds-block-title {
+      color: var(--gold);
+      font-weight: 800;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 3px;
+    }
+
+    .ds-kv {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      color: #cbd5e1;
+    }
+
+    .ds-kv span:last-child {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .ds-stack-list {
+      max-height: 130px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .ds-stack-item {
+      padding: 3px 6px;
+      background: rgba(184, 69, 255, 0.14);
+      border-left: 2px solid var(--purple-stand);
+      font-size: 0.68rem;
+      color: #e9d5ff;
+    }
+
+    /* Screen Flash & Stand Freeze FX */
+    .stand-freeze-fx {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 80;
+      background: radial-gradient(circle, rgba(184, 69, 255, 0.25) 0%, rgba(59, 7, 100, 0.55) 100%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .stand-freeze-fx.active {
+      opacity: 1;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0.65; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen FX Overlay for Star Platinum Activation -->
+  <div id="standFreezeFx" class="stand-freeze-fx"></div>
+
+  <!-- ==========================================================================
+       TOP NAVIGATION & CONTROLS BAR
+       ========================================================================== -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-emblem" title="Star Platinum Emblem">★</div>
+      <div>
+        <div class="brand-title">SOUL GAMBLE: THE D'ARBY SHOWDOWN</div>
+        <div class="brand-subtitle">Stardust Crusaders • Psychological Poker &amp; Data Structures</div>
+      </div>
+    </div>
+
+    <div class="phase-pill">
+      <span class="phase-dot"></span>
+      <span>PHASE: <strong id="hudPhaseLabel">INTRO</strong></span>
+    </div>
+
+    <div class="top-controls">
+      <button class="hud-btn" id="btnToggleNotes" title="View Jotaro's Evidence Log">
+        📋 Evidence Log <span id="notesCountBadge" class="badge-count">0</span>
+      </button>
+      <button class="hud-btn" id="btnToggleInspector" title="Toggle Data Structures Inspector (Key: I)">
+        🔬 DS Inspector [I]
+      </button>
+      <button class="hud-btn" id="btnToggleAudio" title="Toggle Synthesized Sound Effects">
+        🔊 SFX: ON
+      </button>
+      <button class="hud-btn" id="btnOpenRules" title="How to Play & Poker Hand Rankings">
+        📖 Rules
+      </button>
+      <button class="hud-btn" id="btnRestartGame" title="Reset All State & Restart Match">
+        🔄 Restart
+      </button>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       MAIN 3-COLUMN CASINO ARENA
+       ========================================================================== -->
+  <main class="arena-wrapper">
+
+    <!-- LEFT COLUMN: JOTARO KUJO, STAR PLATINUM, AVDOL, EVIDENCE NOTES -->
+    <section class="side-column">
+
+      <!-- Jotaro Kujo Player Card -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">PLAYER • JOTARO KUJO</span>
+          <span class="stat-pill gold" id="jotaroChipsDisplay">Chips: 1,000</span>
+        </div>
+        <div class="char-profile">
+          <div class="avatar-frame jotaro-frame" aria-label="Jotaro Portrait">
+            <!-- Stylized SVG Portrait of Jotaro Kujo -->
+            <svg viewBox="0 0 80 80" width="64" height="64">
+              <rect width="80" height="80" fill="#170f2e"/>
+              <!-- High collar coat -->
+              <path d="M10 80 L18 52 L62 52 L70 80 Z" fill="#111827" stroke="#f5c542" stroke-width="1.5"/>
+              <!-- Gold chain on collar -->
+              <circle cx="26" cy="62" r="3" fill="none" stroke="#f5c542" stroke-width="2"/>
+              <circle cx="31" cy="65" r="3" fill="none" stroke="#f5c542" stroke-width="2"/>
+              <!-- Face & stoic shadow -->
+              <path d="M26 30 L54 30 L51 54 L40 59 L29 54 Z" fill="#f1d2b6"/>
+              <path d="M26 30 L54 30 L53 41 L27 41 Z" fill="#1e1b4b" opacity="0.72"/>
+              <!-- Glowing determined eyes -->
+              <rect x="31" y="36" width="6" height="2.5" fill="#38bdf8"/>
+              <rect x="44" y="36" width="6" height="2.5" fill="#38bdf8"/>
+              <!-- Iconic Cap + Visor + Gold Emblem -->
+              <path d="M20 28 L60 28 L56 14 L24 14 Z" fill="#0f172a" stroke="#f5c542" stroke-width="1.5"/>
+              <path d="M18 28 L64 31 L56 35 L20 33 Z" fill="#090d16"/>
+              <circle cx="40" cy="21" r="4" fill="#f5c542"/>
+            </svg>
+          </div>
+          <div class="char-meta">
+            <div class="char-name">Jotaro Kujo</div>
+            <div class="char-role">Stand: Star Platinum</div>
+            <div class="stat-pill-row">
+              <span class="stat-pill" id="jotaroCardsStatusPill">Cards: Face Up</span>
+              <span class="stat-pill gold" id="reclaimedSoulsPill">Souls Saved: 0/2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Star Platinum Timing Ability Panel -->
+      <div class="panel-card stand-panel">
+        <div class="panel-header">
+          <span class="panel-title">STAND ABILITY • PRECISION</span>
+          <span style="font-size:0.7rem;color:#e9d5ff;">Shortcut: [SPACE]</span>
+        </div>
+        <div style="font-size:0.75rem;color:#e2e8f0;line-height:1.35;" id="standAbilityDesc">
+          Activate <strong>Star Platinum</strong> during a suspicious deal motion or psychological opening. Timing is critical!
+        </div>
+        <button class="stand-btn" id="btnStarPlatinum">
+          ⚡ STAR PLATINUM! [SPACE]
+        </button>
+        <div class="charges-row">
+          <span>Precision Charges:</span>
+          <div class="charge-orbs" id="standChargeOrbs">
+            <span class="charge-orb filled"></span>
+            <span class="charge-orb filled"></span>
+            <span class="charge-orb filled"></span>
+          </div>
+        </div>
+        <div id="standFeedbackMsg" style="margin-top:6px;font-size:0.73rem;color:#f5d0fe;min-height:18px;"></div>
+      </div>
+
+      <!-- Muhammad Avdol Adviser Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">ADVISER • MUHAMMAD AVDOL</span>
+          <span style="font-size:0.7rem;color:var(--amber-soul);" id="avdolUsesLabel">1/1 Ready</span>
+        </div>
+        <div class="char-profile">
+          <div class="avatar-frame" style="width:52px;height:52px;border-color:var(--amber-soul);">
+            <svg viewBox="0 0 60 60" width="48" height="48">
+              <rect width="60" height="60" fill="#2b1206"/>
+              <path d="M12 60 L18 40 L42 40 L48 60 Z" fill="#d97706"/>
+              <circle cx="30" cy="26" r="11" fill="#8d5524"/>
+              <path d="M18 18 L42 18 L39 10 L21 10 Z" fill="#fef08a"/>
+              <rect x="24" y="24" width="4" height="2" fill="#fff"/>
+              <rect x="33" y="24" width="4" height="2" fill="#fff"/>
+            </svg>
+          </div>
+          <div class="char-meta">
+            <div class="char-name" style="font-size:0.88rem;">Muhammad Avdol</div>
+            <div class="char-role">Veteran Gambler's Intuition</div>
+          </div>
+        </div>
+        <button class="avdol-btn" id="btnAskAvdol">
+          🔥 READ D'ARBY (ASK AVDOL) [A]
+        </button>
+        <div class="avdol-quote" id="avdolQuoteBox">
+          "Watch his hands closely, Jotaro. D'Arby never plays a fair game when souls are on the table."
+        </div>
+      </div>
+
+      <!-- Persistent Jotaro's Notes / Evidence Log -->
+      <div class="panel-card notes-box">
+        <div class="panel-header">
+          <span class="panel-title">JOTARO'S NOTES (EVIDENCE LOG)</span>
+          <button class="hud-btn" id="btnReviewDiagram" style="padding:2px 7px;font-size:0.68rem;display:none;">
+            View Diagram
+          </button>
+        </div>
+        <div id="evidenceNotesContainer">
+          <div class="note-empty">No cheating evidence logged yet. Use Star Platinum if you spot suspicious dealing.</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- CENTER COLUMN: GREEN FELT POKER TABLE, DEALER BOY, CARDS, DIALOGUE, ACTIONS -->
+    <section class="table-stage">
+
+      <div class="felt-table">
+
+        <!-- Top Dealer Bar -->
+        <div class="dealer-zone">
+          <div class="dealer-badge">
+            <div class="dealer-mini-avatar" id="dealerAvatarIcon">D'A</div>
+            <div class="dealer-text-group">
+              <div class="dealer-label" id="activeDealerName">CURRENT DEALER: DANIEL J. D'ARBY</div>
+              <div style="color:#cbd5e1;font-size:0.71rem;" id="activeDealerSub">Dealing opening hand directly from the deck...</div>
+            </div>
+          </div>
+          <div class="deck-visual-group">
+            <div style="text-align:right;font-size:0.72rem;color:#d1fae5;">
+              <div>Deck: <strong id="feltDeckCount">52</strong> cards</div>
+              <div>Discard: <strong id="feltDiscardCount">0</strong></div>
+            </div>
+            <div class="deck-stack" id="visualDeckStack" title="52-Card Shoe">52</div>
+          </div>
+        </div>
+
+        <!-- D'Arby's Hand Zone -->
+        <div class="hand-zone">
+          <div class="hand-header">
+            <span>DANIEL J. D'ARBY'S HAND</span>
+            <span class="hand-rank-badge" id="darbyHandRankBadge">Hidden</span>
+          </div>
+          <div class="cards-row" id="darbyCardsContainer">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Center Pot, Active Stakes, Timing Gauge & QTE Prompt -->
+        <div class="table-center-hub">
+          <div class="pot-row">
+            <div class="pot-metric">
+              <div class="pot-label">Current Pot</div>
+              <div class="pot-value" id="potAmountDisplay">0 CHIPS</div>
+            </div>
+            <div class="pot-metric">
+              <div class="pot-label">Current Bet to Call</div>
+              <div class="pot-value" id="currentBetDisplay">0 CHIPS</div>
+            </div>
+            <div class="active-stake-banner" id="narrativeStakeBanner">
+              🪙 Stakes: Opening Warmup &amp; Observation
+            </div>
+          </div>
+
+          <!-- Timing Window Bar for Star Platinum (Hidden except during timing windows) -->
+          <div class="timing-gauge-wrapper" id="timingGaugeWrapper">
+            <div class="timing-title-row">
+              <span id="timingGaugeTitle">⚡ STAR PLATINUM TIMING WINDOW — WATCH D'ARBY'S FINGERS!</span>
+              <span id="timingZoneIndicator">Press [SPACE] in Gold Zone!</span>
+            </div>
+            <div class="timing-bar-outer">
+              <div class="timing-sweet-spot" id="timingSweetSpot"></div>
+              <div class="timing-cursor" id="timingCursor"></div>
+            </div>
+          </div>
+
+          <!-- Quick-Time Event (QTE): Call Out Cheating -->
+          <div class="qte-alert-box" id="qteAlertBox">
+            <div style="font-family:var(--font-display);font-size:1.1rem;color:#fff;letter-spacing:1px;">
+              🚨 YOU CAUGHT HIM! CALL OUT HIS CHEATING!
+            </div>
+            <div style="font-size:0.78rem;color:#fef08a;margin-top:2px;">
+              Expose D'Arby's bottom deal before he squares the deck!
+            </div>
+            <button class="qte-btn" id="btnCallOutCheat">
+              PRESS E NOW! (EXPOSE CHEAT)
+            </button>
+            <div class="qte-timer-track">
+              <div class="qte-timer-fill" id="qteTimerFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jotaro's Hand Zone -->
+        <div class="hand-zone">
+          <div class="cards-row" id="jotaroCardsContainer">
+            <!-- Populated dynamically -->
+          </div>
+          <div class="hand-header">
+            <span>JOTARO KUJO'S HAND</span>
+            <span class="hand-rank-badge" id="jotaroHandRankBadge">Waiting for deal...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dramatic Character Dialogue Box -->
+      <div class="dialogue-box">
+        <div class="speaker-row">
+          <span class="speaker-tag" id="dialogueSpeaker">DANIEL J. D'ARBY</span>
+          <span style="font-size:0.72rem;color:var(--text-muted);" id="dialogueQueueHint">Queue: 0 pending</span>
+        </div>
+        <div class="dialogue-text" id="dialogueText">
+          "Go ahead, Mr. Joestar... Have a seat. Both Polnareff's and Joseph Joestar's souls are sealed inside my poker chips."
+        </div>
+      </div>
+
+      <!-- Player Betting & Strategic Action Controls -->
+      <div class="action-bar">
+        <div class="consequence-preview" id="consequencePreview">
+          Consequence Preview: Ready to begin the match against D'Arby.
+        </div>
+        <div class="action-buttons-grid" id="actionButtonsContainer">
+          <!-- Populated dynamically based on current state -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: DANIEL J. D'ARBY, CONFIDENCE METER, SOUL CHIPS TRACKER -->
+    <section class="side-column">
+
+      <!-- D'Arby Opponent Card & Psychological AI State -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">OPPONENT • DANIEL J. D'ARBY</span>
+          <span class="stat-pill gold" id="darbyChipsDisplay">Chips: 2,000</span>
+        </div>
+        <div class="char-profile">
+          <div class="avatar-frame darby-frame" id="darbyAvatarFrame">
+            <!-- Dynamic SVG Portrait of Daniel J. D'Arby -->
+            <svg id="darbySvgPortrait" viewBox="0 0 80 80" width="64" height="64">
+              <rect width="80" height="80" fill="#23153c"/>
+              <!-- Suit & Bowtie -->
+              <path d="M12 80 L20 54 L60 54 L68 80 Z" fill="#3b0764" stroke="#f5c542" stroke-width="1.5"/>
+              <polygon points="33,57 47,57 40,63" fill="#e63946"/>
+              <!-- Head & Striped Hatband -->
+              <path d="M25 26 L55 26 L52 53 L40 58 L28 53 Z" fill="#e8be9e"/>
+              <!-- Iconic sideburns/facial grid stripes -->
+              <rect x="26" y="38" width="4" height="12" fill="#1e1b4b"/>
+              <rect x="50" y="38" width="4" height="12" fill="#1e1b4b"/>
+              <!-- Hat -->
+              <path d="M22 26 L58 26 L54 12 L26 12 Z" fill="#f5c542"/>
+              <path d="M23 22 L57 22 L57 26 L23 26 Z" fill="#7c2d12"/>
+              <!-- Eyes & Expression (Updated dynamically) -->
+              <g id="darbyEyesGroup">
+                <rect x="31" y="34" width="6" height="3" fill="#1e1b4b"/>
+                <rect x="43" y="34" width="6" height="3" fill="#1e1b4b"/>
+              </g>
+              <!-- Mouth -->
+              <path id="darbyMouthPath" d="M33 48 Q40 53 47 48" stroke="#1e1b4b" stroke-width="2.2" fill="none"/>
+              <!-- Sweat drops (shown when uneasy/shaken/desperate) -->
+              <g id="darbySweatGroup" style="display:none;">
+                <circle cx="52" cy="31" r="2.5" fill="#38bdf8"/>
+                <circle cx="28" cy="33" r="2.2" fill="#38bdf8"/>
+              </g>
+            </svg>
+          </div>
+          <div class="char-meta">
+            <div class="char-name">Daniel J. D'Arby</div>
+            <div class="char-role">Stand: Osiris (Soul Collector)</div>
+            <div class="stat-pill-row">
+              <span class="psych-badge psych-CALM" id="darbyPsychBadge">STATE: CALM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confidence Meter -->
+        <div class="meter-container">
+          <div class="meter-label-row">
+            <span>D'Arby Composure / Confidence</span>
+            <span id="darbyConfidencePct">85%</span>
+          </div>
+          <div class="meter-track">
+            <div class="meter-fill" id="darbyConfidenceBar" style="width: 85%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Captured & Reclaimed Souls Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">CAPTURED SOULS (MAP TRACKER)</span>
+        </div>
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-bottom:6px;">
+          Win the match to force D'Arby's Stand Osiris to release every captured soul chip.
+        </div>
+        <div class="soul-chips-list" id="soulChipsListContainer">
+          <!-- Rendered dynamically from soulChipsMap -->
+        </div>
+      </div>
+
+      <!-- Quick Strategy & Keyboard Guide -->
+      <div class="panel-card" style="flex:1;">
+        <div class="panel-header">
+          <span class="panel-title">MATCH ROADMAP &amp; CONTROLS</span>
+        </div>
+        <ul style="font-size:0.74rem;line-height:1.52;color:#cbd5e1;padding-left:16px;">
+          <li><strong>Phase 1 (Opening Deal):</strong> Watch D'Arby deal. Press <kbd>[SPACE]</kbd> inside the gold timing window to catch his <em>Bottom Deal</em>, then press <kbd>[E]</kbd> to expose him!</li>
+          <li><strong>Phase 2 (First Hand):</strong> Learn betting controls (Call, Raise, Fold) with the neutral Dealer Boy.</li>
+          <li><strong>Phase 3 (Second Hand):</strong> <strong>Polnareff's Soul Chip</strong> is wagered! Exchange up to 2 cards or bet directly.</li>
+          <li><strong>Phase 4 (Final Showdown):</strong> <strong>Joseph's Soul Chip</strong> is at stake against D'Arby's <em>Four Kings</em>. Keep your cards face down, time Star Platinum's precision stunt, and raise everything!</li>
+        </ul>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       DATA STRUCTURES INSPECTOR DRAWER (For Faculty Presentation)
+       ========================================================================== -->
+  <aside class="ds-inspector-drawer" id="dsInspectorDrawer" aria-label="Data Structures Live Inspector">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:var(--font-display);font-size:1rem;color:var(--purple-stand);letter-spacing:1px;">
+        🔬 LIVE DATA STRUCTURES INSPECTOR
+      </div>
+      <button class="hud-btn" id="btnCloseInspector" style="padding:2px 8px;">✕</button>
+    </div>
+    <div style="font-size:0.7rem;color:var(--text-muted);">
+      Real-time runtime reflection of the 5 core Data Structures powering the game.
+    </div>
+
+    <!-- 1. State Machine -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>1. GameStateMachine (Finite State Automaton)</span>
+      </div>
+      <div class="ds-kv"><span>Current State:</span> <span id="dsCurrentState">INTRO</span></div>
+      <div class="ds-kv"><span>Previous State:</span> <span id="dsPrevState">NONE</span></div>
+      <div class="ds-kv"><span>Valid Next Transitions:</span> <span id="dsAllowedTransitions">CHEATING_SEQUENCE</span></div>
+    </div>
+
+    <!-- 2. Dynamic Arrays -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>2. Dynamic Arrays (Deck, Hands, Discard)</span>
+      </div>
+      <div class="ds-kv"><span>deck.length (Fisher-Yates):</span> <span id="dsDeckLen">52</span></div>
+      <div class="ds-kv"><span>discardPile.length:</span> <span id="dsDiscardLen">0</span></div>
+      <div class="ds-kv"><span>jotaroHand.length:</span> <span id="dsJotaroHandLen">0</span></div>
+      <div class="ds-kv"><span>darbyHand.length:</span> <span id="dsDarbyHandLen">0</span></div>
+      <div class="ds-kv"><span>evidenceNotes.length:</span> <span id="dsNotesLen">0</span></div>
+    </div>
+
+    <!-- 3. Queue (FIFO) -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>3. Queue Class (FIFO Deal &amp; Dialogue)</span>
+      </div>
+      <div class="ds-kv"><span>dealQueue.size():</span> <span id="dsDealQueueSize">0</span></div>
+      <div class="ds-kv"><span>dealQueue.peek():</span> <span id="dsDealQueuePeek">EMPTY</span></div>
+      <div class="ds-kv"><span>dialogueQueue.size():</span> <span id="dsDialogueQueueSize">0</span></div>
+    </div>
+
+    <!-- 4. Map (Hash-Based Lookup) -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>4. Map Objects (O(1) Key-Value Lookup)</span>
+      </div>
+      <div class="ds-kv"><span>soulChipsMap.get('POLNAREFF'):</span> <span id="dsPolnareffState">HELD BY D'ARBY</span></div>
+      <div class="ds-kv"><span>soulChipsMap.get('JOSEPH'):</span> <span id="dsJosephState">HELD BY D'ARBY</span></div>
+      <div class="ds-kv"><span>Captured / Recovered Count:</span> <span id="dsSoulsSummary">2 Held / 0 Saved</span></div>
+    </div>
+
+    <!-- 5. Psychological AI Internal Debug Values -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>D'Arby AI Internal Debug Metrics</span>
+      </div>
+      <div class="ds-kv"><span>confidence (0-100):</span> <span id="dsAiConfidence">85</span></div>
+      <div class="ds-kv"><span>doubt (0-100):</span> <span id="dsAiDoubt">10</span></div>
+      <div class="ds-kv"><span>suspicion (0-100):</span> <span id="dsAiSuspicion">15</span></div>
+      <div class="ds-kv"><span>cheatDetected / cheatExposed:</span> <span id="dsAiCheatFlags">false / false</span></div>
+      <div class="ds-kv"><span>keptHidden / stuntSucceeded:</span> <span id="dsAiFinalFlags">false / false</span></div>
+      <div class="ds-kv"><span>Computed bluffStrength vs Call(65):</span> <span id="dsAiBluffScore">0 / 65</span></div>
+    </div>
+
+    <!-- 6. Stack (LIFO Event History) -->
+    <div class="ds-block">
+      <div class="ds-block-title">
+        <span>5. Stack Class (LIFO Event History)</span>
+        <span id="dsStackSize">0 items</span>
+      </div>
+      <div class="ds-stack-list" id="dsStackList">
+        <!-- Populated from eventHistoryStack -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==========================================================================
+       MODAL 1: BOTTOM DEAL VISUAL EVIDENCE & TUTORIAL PANEL
+       ========================================================================== -->
+  <div class="modal-backdrop" id="evidenceModal">
+    <div class="modal-window">
+      <div class="modal-title">⚡ STAR PLATINUM: CHEATING EXPOSED IN FREEZE-FRAME!</div>
+      <div style="font-size:0.86rem;color:#cbd5e1;">
+        Star Platinum's superhuman eyesight caught the exact millisecond D'Arby manipulated the deck!
+      </div>
+
+      <!-- Two Illustrated Steps as Required -->
+      <div class="diagram-grid">
+        <!-- Step 1: Normal Deal -->
+        <div class="diagram-card">
+          <div style="font-family:var(--font-display);color:var(--emerald);font-size:0.95rem;margin-bottom:6px;">
+            1. NORMAL DEAL
+          </div>
+          <svg viewBox="0 0 260 110" width="100%" height="105" style="background:#0c1914;border-radius:6px;margin-bottom:8px;">
+            <!-- Deck stack -->
+            <rect x="30" y="38" width="60" height="44" rx="4" fill="#334155" stroke="#94a3b8" stroke-width="2"/>
+            <!-- Highlighted Top Card sliding off top -->
+            <rect x="46" y="22" width="60" height="32" rx="4" fill="#10b981" stroke="#fff" stroke-width="2"/>
+            <text x="54" y="42" fill="#000" font-size="11" font-weight="bold">TOP CARD</text>
+            <!-- Arrow to player -->
+            <path d="M115 38 L205 38" stroke="#10b981" stroke-width="4" stroke-dasharray="4 2"/>
+            <polygon points="205,32 220,38 205,44" fill="#10b981"/>
+            <text x="128" y="62" fill="#a7f3d0" font-size="10">Fair Top Distribution</text>
+          </svg>
+          <p style="font-size:0.78rem;line-height:1.4;color:#e2e8f0;">
+            The dealer takes the top card of the deck and distributes it normally.
+          </p>
+        </div>
+
+        <!-- Step 2: D'Arby's Cheat -->
+        <div class="diagram-card cheat-highlight">
+          <div style="font-family:var(--font-display);color:var(--crimson);font-size:0.95rem;margin-bottom:6px;">
+            2. D'ARBY'S CHEAT (SECOND / BOTTOM DEAL)
+          </div>
+          <svg viewBox="0 0 260 110" width="100%" height="105" style="background:#1f0d14;border-radius:6px;margin-bottom:8px;">
+            <!-- Top of Deck kept stationary -->
+            <rect x="30" y="24" width="60" height="38" rx="4" fill="#475569" stroke="#cbd5e1" stroke-width="2"/>
+            <text x="40" y="46" fill="#cbd5e1" font-size="9">TOP HELD</text>
+            <!-- Highlighted Bottom Card sliding from bottom -->
+            <rect x="52" y="64" width="64" height="32" rx="4" fill="#e63946" stroke="#f5c542" stroke-width="2.5"/>
+            <text x="57" y="84" fill="#fff" font-size="10" font-weight="bold">BOTTOM CARD</text>
+            <!-- Finger Grip Close-up & Arrow to D'Arby -->
+            <circle cx="45" cy="78" r="10" fill="none" stroke="#f5c542" stroke-width="2"/>
+            <path d="M122 80 L205 80" stroke="#e63946" stroke-width="4"/>
+            <polygon points="205,74 220,80 205,86" fill="#e63946"/>
+            <text x="125" y="65" fill="#fca5a5" font-size="10" font-weight="bold">Secretly Slipped to Self!</text>
+          </svg>
+          <p style="font-size:0.78rem;line-height:1.4;color:#e2e8f0;">
+            D'Arby secretly takes a card from the bottom of the deck and slips it into his own hand instead of dealing honestly.
+          </p>
+        </div>
+      </div>
+
+      <!-- Exact Mandatory Key Information Quote -->
+      <div class="exact-evidence-quote">
+        “BOTTOM DEAL DETECTED: D'Arby used the bottom card instead of dealing honestly from the top. This allows him to manipulate which card enters his hand. He may have a stronger hand than a fair deal would suggest.”
+      </div>
+
+      <div style="font-size:0.8rem;color:#fde68a;margin-bottom:14px;">
+        📌 <strong>Persistent Note Unlocked:</strong> <em>OBSERVATION 01 — BOTTOM DEALING</em> has been permanently recorded in <strong>Jotaro's Notes</strong> for the rest of the match.
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="act-btn primary" id="btnCloseEvidenceModal" style="max-width:280px;">
+          CONTINUE TO TABLE (GET READY FOR QTE!)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: RULES, ONBOARDING & POKER HAND RANKINGS
+       ========================================================================== -->
+  <div class="modal-backdrop" id="rulesModal">
+    <div class="modal-window">
+      <div class="modal-title">📖 HOW TO PLAY &amp; POKER HAND RANKINGS</div>
+      <p style="font-size:0.84rem;color:#cbd5e1;line-height:1.45;margin-bottom:10px;">
+        You are <strong>Jotaro Kujo</strong> facing master gambler <strong>Daniel J. D'Arby</strong> in Cairo. D'Arby has sealed the souls of <strong>Joseph Joestar</strong> and <strong>Jean Pierre Polnareff</strong> inside poker chips.
+      </p>
+      <div class="diagram-grid">
+        <div class="diagram-card">
+          <div style="color:var(--gold);font-weight:800;margin-bottom:6px;">5-Card Poker Rankings (Strongest → Weakest)</div>
+          <ol style="font-size:0.76rem;line-height:1.55;padding-left:18px;color:#e2e8f0;">
+            <li><strong>Royal Flush:</strong> A-K-Q-J-10 of the same suit</li>
+            <li><strong>Straight Flush:</strong> 5 consecutive ranks, same suit</li>
+            <li><strong>Four of a Kind:</strong> 4 cards of identical rank (e.g., Four Kings)</li>
+            <li><strong>Full House:</strong> Three of a Kind + One Pair</li>
+            <li><strong>Flush:</strong> Any 5 cards of the same suit</li>
+            <li><strong>Straight:</strong> 5 consecutive ranks (Ace-high or Ace-low A-2-3-4-5)</li>
+            <li><strong>Three of a Kind:</strong> 3 cards of identical rank</li>
+            <li><strong>Two Pair:</strong> Two different pairs</li>
+            <li><strong>One Pair:</strong> Two cards of identical rank</li>
+            <li><strong>High Card:</strong> Highest single card breaks ties</li>
+          </ol>
+        </div>
+        <div class="diagram-card">
+          <div style="color:var(--purple-stand);font-weight:800;margin-bottom:6px;">Key Mechanics &amp; Shortcuts</div>
+          <ul style="font-size:0.76rem;line-height:1.55;padding-left:18px;color:#e2e8f0;">
+            <li><strong>Star Platinum [<kbd>SPACE</kbd>]:</strong> Must be timed when the indicator enters the gold zone! Used in Phase 1 to spot D'Arby's bottom deal, and in the Final Showdown to perform an impossible speed stunt.</li>
+            <li><strong>Accusation QTE [<kbd>E</kbd>]:</strong> Appears for 2.5 seconds right after catching D'Arby's cheat.</li>
+            <li><strong>Read D'Arby [<kbd>A</kbd>]:</strong> Ask Muhammad Avdol once per hand for a contextual psychological read.</li>
+            <li><strong>DS Inspector [<kbd>I</kbd>]:</strong> Opens the live Data Structures panel showing the State Machine, Queue, Stack, Map, and Arrays.</li>
+          </ul>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button class="act-btn primary" id="btnCloseRulesModal" style="max-width:200px;">GOT IT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: VICTORY / DEFEAT ENDING MODAL
+       ========================================================================== -->
+  <div class="modal-backdrop" id="endingModal">
+    <div class="modal-window" style="text-align:center;">
+      <div class="modal-title" id="endingTitle">VICTORY!</div>
+      <div id="endingSubtitle" style="font-size:0.95rem;color:var(--gold);font-weight:800;margin-bottom:12px;"></div>
+      <div id="endingBody" style="font-size:0.88rem;line-height:1.55;color:#e2e8f0;background:rgba(0,0,0,0.45);padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);margin-bottom:16px;text-align:left;"></div>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+        <button class="act-btn bluff-special" id="btnRetryFinalHand" style="max-width:240px;display:none;">
+          ⏪ RETRY FINAL SHOWDOWN
+        </button>
+        <button class="act-btn primary" id="btnEndingRestart" style="max-width:240px;">
+          🔄 PLAY AGAIN (FULL RESTART)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT: DATA STRUCTURES, POKER ENGINE, PSYCHOLOGICAL AI & UI CONTROLLER
+       ========================================================================== -->
+  <script>
+    "use strict";
+
+    /* ==========================================================================
+       SECTION A: EXPLICIT DATA STRUCTURES IMPLEMENTATIONS (For College Project)
+       ========================================================================== */
+
+    /**
+     * 1. QUEUE CLASS (FIFO - First-In, First-Out)
+     * Used genuinely for:
+     *  - dealQueue: Sequentially animated card-dealing operations.
+     *  - dialogueQueue: Ordered dramatic dialogue beats.
+     */
+    class Queue {
+      constructor() {
+        this._items = [];
+      }
+      enqueue(item) {
+        this._items.push(item);
+      }
+      dequeue() {
+        if (this.isEmpty()) return null;
+        return this._items.shift();
+      }
+      peek() {
+        if (this.isEmpty()) return null;
+        return this._items[0];
+      }
+      isEmpty() {
+        return this._items.length === 0;
+      }
+      size() {
+        return this._items.length;
+      }
+      clear() {
+        this._items = [];
+      }
+      toArray() {
+        return [...this._items];
+      }
+    }
+
+    /**
+     * 2. STACK CLASS (LIFO - Last-In, First-Out)
+     * Used genuinely for:
+     *  - eventHistoryStack: Chronological LIFO audit log of player decisions, bets,
+     *    Stand activations, and state changes shown in the Data Structures Inspector.
+     *  - checkpointStack: Saves reversible state snapshots before the Final Showdown
+     *    so the player can pop and "Retry Final Hand" after a defeat.
+     */
+    class Stack {
+      constructor(maxCapacity = 60) {
+        this._items = [];
+        this._maxCapacity = maxCapacity;
+      }
+      push(item) {
+        if (this._items.length >= this._maxCapacity) {
+          this._items.shift();
+        }
+        this._items.push(item);
+      }
+      pop() {
+        if (this.isEmpty()) return null;
+        return this._items.pop();
+      }
+      peek() {
+        if (this.isEmpty()) return null;
+        return this._items[this._items.length - 1];
+      }
+      isEmpty() {
+        return this._items.length === 0;
+      }
+      size() {
+        return this._items.length;
+      }
+      clear() {
+        this._items = [];
+      }
+      toArray() {
+        // Return top-of-stack first for inspector display
+        return [...this._items].reverse();
+      }
+    }
+
+    /**
+     * 3. FINITE STATE MACHINE CLASS (GameStateMachine)
+     * Explicitly governs valid game phases and transitions so timing events, QTEs,
+     * regular poker hands, and the final showdown cannot execute out of order.
+     */
+    class GameStateMachine {
+      constructor(eventStack) {
+        this.currentState = "INTRO";
+        this.previousState = "NONE";
+        this.eventStack = eventStack;
+
+        // Explicit Directed Graph of Valid Transitions (Adjacency List)
+        this.transitions = {
+          INTRO: ["CHEATING_SEQUENCE"],
+          CHEATING_SEQUENCE: ["EVIDENCE_QTE", "FIRST_HAND"],
+          EVIDENCE_QTE: ["FIRST_HAND"],
+          FIRST_HAND: ["SECOND_HAND"],
+          SECOND_HAND: ["FINAL_SHOWDOWN"],
+          FINAL_SHOWDOWN: ["VICTORY", "DEFEAT", "FINAL_SHOWDOWN"],
+          VICTORY: ["INTRO"],
+          DEFEAT: ["FINAL_SHOWDOWN", "INTRO"]
+        };
+      }
+
+      canTransition(targetState) {
+        const allowed = this.transitions[this.currentState] || [];
+        return allowed.includes(targetState);
+      }
+
+      transitionTo(targetState, reason = "") {
+        if (!this.canTransition(targetState) && targetState !== "INTRO") {
+          console.warn(`Invalid state transition blocked: ${this.currentState} -> ${targetState}`);
+          return false;
+        }
+        this.previousState = this.currentState;
+        this.currentState = targetState;
+        if (this.eventStack) {
+          this.eventStack.push(
+            `[STATE] ${this.previousState} → ${this.currentState}${reason ? " (" + reason + ")" : ""}`
+          );
+        }
+        return true;
+      }
+
+      getAllowedNextStates() {
+        return this.transitions[this.currentState] || [];
+      }
+    }
+
+    /* ==========================================================================
+       SECTION B: SYNTHESIZED WEB AUDIO SFX ENGINE (No External Sound Files)
+       ========================================================================== */
+    const SoundFX = {
+      enabled: true,
+      ctx: null,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume();
+        }
+      },
+
+      playTone(freq, type = "sine", duration = 0.12, gainVal = 0.12) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          // Ignore audio errors on restricted devices
+        }
+      },
+
+      cardDeal() {
+        this.playTone(520, "triangle", 0.06, 0.08);
+      },
+
+      chipBet() {
+        this.playTone(880, "sine", 0.08, 0.1);
+        setTimeout(() => this.playTone(1180, "sine", 0.09, 0.08), 45);
+      },
+
+      standSuccess() {
+        this.playTone(220, "sawtooth", 0.18, 0.16);
+        setTimeout(() => this.playTone(440, "sawtooth", 0.18, 0.16), 70);
+        setTimeout(() => this.playTone(880, "square", 0.28, 0.18), 140);
+      },
+
+      standFail() {
+        this.playTone(190, "sawtooth", 0.22, 0.12);
+        setTimeout(() => this.playTone(130, "sawtooth", 0.25, 0.12), 110);
+      },
+
+      qteSuccess() {
+        this.playTone(587, "square", 0.12, 0.15);
+        setTimeout(() => this.playTone(880, "square", 0.24, 0.18), 90);
+      },
+
+      victoryFanfare() {
+        [523, 659, 784, 1046].forEach((f, idx) => {
+          setTimeout(() => this.playTone(f, "triangle", 0.22, 0.15), idx * 110);
+        });
+      },
+
+      defeatChord() {
+        [311, 277, 233, 185].forEach((f, idx) => {
+          setTimeout(() => this.playTone(f, "sawtooth", 0.26, 0.13), idx * 120);
+        });
+      }
+    };
+
+    /* ==========================================================================
+       SECTION C: 52-CARD DECK, FISHER-YATES SHUFFLE & POKER HAND EVALUATOR
+       ========================================================================== */
+
+    const SUITS = [
+      { code: "S", symbol: "♠", color: "black", name: "Spades" },
+      { code: "H", symbol: "♥", color: "red", name: "Hearts" },
+      { code: "D", symbol: "♦", color: "red", name: "Diamonds" },
+      { code: "C", symbol: "♣", color: "black", name: "Clubs" }
+    ];
+
+    const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+    // 4. MAP OBJECT (rankValueMap) for O(1) rank-to-integer lookups
+    const rankValueMap = new Map([
+      ["2", 2], ["3", 3], ["4", 4], ["5", 5],
+      ["6", 6], ["7", 7], ["8", 8], ["9", 9],
+      ["10", 10], ["J", 11], ["Q", 12], ["K", 13], ["A", 14]
+    ]);
+
+    const VALUE_TO_RANK_NAME = {
+      2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8",
+      9: "9", 10: "10", 11: "Jack", 12: "Queen", 13: "King", 14: "Ace"
+    };
+
+    /**
+     * Creates a fresh standard 52-card dynamic array without duplicates.
+     */
+    function createStandardDeck() {
+      const newDeck = [];
+      for (const suit of SUITS) {
+        for (const rank of RANKS) {
+          newDeck.push({
+            id: `${rank}${suit.code}`,
+            rank,
+            value: rankValueMap.get(rank),
+            suit: suit.code,
+            suitSymbol: suit.symbol,
+            color: suit.color
+          });
+        }
+      }
+      return newDeck;
+    }
+
+    /**
+     * Fisher–Yates (Knuth) In-Place Shuffle Algorithm — O(n) Time Complexity
+     */
+    function shuffleDeckFisherYates(deckArray) {
+      for (let i = deckArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = deckArray[i];
+        deckArray[i] = deckArray[j];
+        deckArray[j] = temp;
+      }
+      return deckArray;
+    }
+
+    /**
+     * Genuine 5-Card Poker Hand Evaluator
+     * Supports all 10 rankings from Royal Flush (10) down to High Card (1),
+     * including Ace-low straights (A-2-3-4-5) and exact lexicographical tie-breakers.
+     */
+    function evaluatePokerHand(cards) {
+      if (!cards || cards.length < 5) {
+        return { categoryRank: 0, categoryName: "Incomplete", tieBreakers: [0], description: "Incomplete Hand" };
+      }
+
+      // Sort descending by numeric card value
+      const sorted = [...cards].sort((a, b) => b.value - a.value);
+      const values = sorted.map(c => c.value);
+      const suits = sorted.map(c => c.suit);
+
+      const isFlush = suits.every(s => s === suits[0]);
+
+      // Check normal consecutive straight (e.g., 10-9-8-7-6)
+      let isStraight = true;
+      for (let i = 0; i < 4; i++) {
+        if (values[i] - 1 !== values[i + 1]) {
+          isStraight = false;
+          break;
+        }
+      }
+
+      // Check Ace-low straight (A-5-4-3-2 -> high card of straight is 5)
+      let straightHigh = values[0];
+      if (!isStraight && values[0] === 14 && values[1] === 5 && values[2] === 4 && values[3] === 3 && values[4] === 2) {
+        isStraight = true;
+        straightHigh = 5;
+      }
+
+      // Count rank frequencies using a Map
+      const freqMap = new Map();
+      for (const v of values) {
+        freqMap.set(v, (freqMap.get(v) || 0) + 1);
+      }
+
+      // Sort groups by (count DESC, cardValue DESC) for tie-breaking
+      const groups = Array.from(freqMap.entries())
+        .map(([val, count]) => ({ val, count }))
+        .sort((a, b) => (b.count !== a.count ? b.count - a.count : b.val - a.val));
+
+      const countsPattern = groups.map(g => g.count).join(",");
+      const tieBreakers = groups.map(g => g.val);
+
+      // 1. Royal Flush (10)
+      if (isFlush && isStraight && straightHigh === 14) {
+        return {
+          categoryRank: 10,
+          categoryName: "Royal Flush",
+          tieBreakers: [14],
+          description: "Royal Flush"
+        };
+      }
+      // 2. Straight Flush (9)
+      if (isFlush && isStraight) {
+        return {
+          categoryRank: 9,
+          categoryName: "Straight Flush",
+          tieBreakers: [straightHigh],
+          description: `Straight Flush (${VALUE_TO_RANK_NAME[straightHigh]} High)`
+        };
+      }
+      // 3. Four of a Kind (8)
+      if (countsPattern === "4,1") {
+        return {
+          categoryRank: 8,
+          categoryName: "Four of a Kind",
+          tieBreakers,
+          description: `Four of a Kind (${VALUE_TO_RANK_NAME[groups[0].val]}s)`
+        };
+      }
+      // 4. Full House (7)
+      if (countsPattern === "3,2") {
+        return {
+          categoryRank: 7,
+          categoryName: "Full House",
+          tieBreakers,
+          description: `Full House (${VALUE_TO_RANK_NAME[groups[0].val]}s full of ${VALUE_TO_RANK_NAME[groups[1].val]}s)`
+        };
+      }
+      // 5. Flush (6)
+      if (isFlush) {
+        return {
+          categoryRank: 6,
+          categoryName: "Flush",
+          tieBreakers: values,
+          description: `Flush (${VALUE_TO_RANK_NAME[values[0]]} High)`
+        };
+      }
+      // 6. Straight (5)
+      if (isStraight) {
+        return {
+          categoryRank: 5,
+          categoryName: "Straight",
+          tieBreakers: [straightHigh],
+          description: `Straight (${VALUE_TO_RANK_NAME[straightHigh]} High)`
+        };
+      }
+      // 7. Three of a Kind (4)
+      if (countsPattern === "3,1,1") {
+        return {
+          categoryRank: 4,
+          categoryName: "Three of a Kind",
+          tieBreakers,
+          description: `Three of a Kind (${VALUE_TO_RANK_NAME[groups[0].val]}s)`
+        };
+      }
+      // 8. Two Pair (3)
+      if (countsPattern === "2,2,1") {
+        return {
+          categoryRank: 3,
+          categoryName: "Two Pair",
+          tieBreakers,
+          description: `Two Pair (${VALUE_TO_RANK_NAME[groups[0].val]}s & ${VALUE_TO_RANK_NAME[groups[1].val]}s)`
+        };
+      }
+      // 9. One Pair (2)
+      if (countsPattern === "2,1,1,1") {
+        return {
+          categoryRank: 2,
+          categoryName: "One Pair",
+          tieBreakers,
+          description: `One Pair of ${VALUE_TO_RANK_NAME[groups[0].val]}s`
+        };
+      }
+      // 10. High Card (1)
+      return {
+        categoryRank: 1,
+        categoryName: "High Card",
+        tieBreakers: values,
+        description: `High Card (${VALUE_TO_RANK_NAME[values[0]]})`
+      };
+    }
+
+    /**
+     * Compares two 5-card hands:
+     * Returns  1 if handA wins, -1 if handB wins, 0 if exact tie.
+     */
+    function comparePokerHands(handA, handB) {
+      const evalA = evaluatePokerHand(handA);
+      const evalB = evaluatePokerHand(handB);
+
+      if (evalA.categoryRank !== evalB.categoryRank) {
+        return evalA.categoryRank > evalB.categoryRank ? 1 : -1;
+      }
+      const len = Math.max(evalA.tieBreakers.length, evalB.tieBreakers.length);
+      for (let i = 0; i < len; i++) {
+        const valA = evalA.tieBreakers[i] || 0;
+        const valB = evalB.tieBreakers[i] || 0;
+        if (valA !== valB) {
+          return valA > valB ? 1 : -1;
+        }
+      }
+      return 0;
+    }
+
+    /* ==========================================================================
+       SECTION D: GAME STATE, MAPS, ARRAYS & PSYCHOLOGICAL AI MODEL
+       ========================================================================== */
+
+    const eventHistoryStack = new Stack(80);
+    const checkpointStack = new Stack(5);
+    const stateMachine = new GameStateMachine(eventHistoryStack);
+    const dealQueue = new Queue();
+    const dialogueQueue = new Queue();
+
+    // Hash-based Map for Soul Chips (Joseph Joestar & Jean Pierre Polnareff)
+    const soulChipsMap = new Map();
+
+    // Dynamic Arrays for cards and notes
+    let deck = [];
+    let discardPile = [];
+    let jotaroHand = [];
+    let darbyHand = [];
+    let evidenceNotes = [];
+    let selectedDiscardIndices = [];
+
+    // Game & Player State
+    const GameData = {
+      jotaroChips: 1000,
+      darbyChips: 2000,
+      pot: 0,
+      currentBetToCall: 0,
+      jotaroCardsFaceUp: true,
+      starPlatinumCharges: 3,
+      avdolAvailableThisHand: true,
+      dealerIsBoy: false,
+      handSubStage: "READY", // READY, DEALING, EXCHANGE, BETTING, RESOLVED
+      finalRaiseLevel: 0,    // 1 = Cautious, 2 = All-In Chips, 3 = Soul & DIO Secret
+      isBusyAnimating: false,
+
+      // Timing Window & QTE runtime trackers
+      timingActive: false,
+      timingMode: "NONE",    // "OPENING_CHEAT" or "FINAL_STUNT"
+      timingProgress: 0,     // 0 to 100
+      timingRafId: null,
+      timingAttemptedThisWindow: false,
+
+      qteActive: false,
+      qteProgress: 100,
+      qteIntervalId: null
+    };
+
+    /**
+     * D'Arby's Psychological AI Model (Section 9)
+     */
+    const darbyAI = {
+      confidence: 85,          // 0 to 100
+      doubt: 10,               // 0 to 100
+      suspicion: 15,           // 0 to 100
+      handStrength: 0,         // categoryRank (1..10)
+      cheatDetected: false,    // Did Jotaro catch the bottom deal?
+      cheatExposed: false,     // Did Jotaro press E in time to publicly expose him?
+      stuntSucceeded: false,   // Did Jotaro land the Final Showdown Star Platinum stunt?
+      keptCardsHidden: false,  // Did Jotaro refuse to look at his cards in the Final Showdown?
+
+      clampMetrics() {
+        this.confidence = Math.max(0, Math.min(100, Math.round(this.confidence)));
+        this.doubt = Math.max(0, Math.min(100, Math.round(this.doubt)));
+        this.suspicion = Math.max(0, Math.min(100, Math.round(this.suspicion)));
+      },
+
+      getPsychStateLabel() {
+        if (this.doubt >= 70 || this.confidence <= 25) return "DESPERATE";
+        if (this.doubt >= 45 || this.confidence <= 48) return "SHAKEN";
+        if (this.doubt >= 25 || this.confidence <= 68) return "UNEASY";
+        return "CALM";
+      },
+
+      /**
+       * AI Decision Engine for Regular Hands (Hand 1 & Hand 2)
+       * Returns "FOLD", "CALL", or "RAISE" based on hand strength, confidence, and doubt.
+       */
+      decideRegularHandAction(raiseSize) {
+        const evalResult = evaluatePokerHand(darbyHand);
+        this.handStrength = evalResult.categoryRank;
+
+        // Effective willingness to call/fight
+        const resolveScore =
+          (this.handStrength * 12) +
+          (this.confidence * 0.45) -
+          (this.doubt * 0.35) -
+          (raiseSize > 200 ? 14 : 0);
+
+        if (resolveScore < 42 && this.handStrength <= 2 && raiseSize >= 200) {
+          return "FOLD";
+        }
+        if (resolveScore >= 78 && this.handStrength >= 3) {
+          return "RAISE";
+        }
+        return "CALL";
+      },
+
+      /**
+       * Deterministic Bluff Score Calculator for the Final Showdown (Section 12)
+       * D'Arby holds Four Kings (categoryRank = 8).
+       * Calling Threshold = 65.
+       */
+      calculateFinalBluffStrength(raiseLevel) {
+        let score = 0;
+
+        // 1. Keeping cards face down (Unseen hand creates massive psychological terror)
+        if (this.keptCardsHidden) {
+          score += 32;
+        } else {
+          score += 5; // Peeked at weak hand
+        }
+
+        // 2. Successful Star Platinum speed demonstration
+        if (this.stuntSucceeded) {
+          score += 34;
+        }
+
+        // 3. Earlier cheating detection & exposure
+        if (this.cheatDetected) score += 10;
+        if (this.cheatExposed) score += 12;
+
+        // 4. Size and audacity of the final raise
+        if (raiseLevel === 3) {
+          score += 30; // Raising Jotaro's, Kakyoin's & Avdol's souls + demanding DIO's secret
+        } else if (raiseLevel === 2) {
+          score += 16; // All-in chips
+        } else if (raiseLevel === 1) {
+          score += 5;  // Small chip raise
+        }
+
+        // 5. Modifier from accumulated doubt vs remaining confidence
+        score += Math.round((this.doubt - this.confidence) * 0.15);
+
+        return Math.max(0, Math.min(120, score));
+      }
+    };
+
+    /* ==========================================================================
+       SECTION E: INITIALIZATION & SOUL CHIPS MAP SETUP
+       ========================================================================== */
+
+    function initSoulChipsMap() {
+      soulChipsMap.clear();
+      soulChipsMap.set("POLNAREFF", {
+        id: "POLNAREFF",
+        name: "Jean Pierre Polnareff",
+        initials: "JPP",
+        discClass: "polnareff-disc",
+        status: "HELD BY D'ARBY",
+        wagerRound: "Hand 2 Stake"
+      });
+      soulChipsMap.set("JOSEPH", {
+        id: "JOSEPH",
+        name: "Joseph Joestar",
+        initials: "JJ",
+        discClass: "joseph-disc",
+        status: "HELD BY D'ARBY",
+        wagerRound: "Final Showdown Stake"
+      });
+    }
+
+    function resetFullGame() {
+      stopAllTimers();
+      eventHistoryStack.clear();
+      checkpointStack.clear();
+      dealQueue.clear();
+      dialogueQueue.clear();
+
+      deck = createStandardDeck();
+      shuffleDeckFisherYates(deck);
+      discardPile = [];
+      jotaroHand = [];
+      darbyHand = [];
+      evidenceNotes = [];
+      selectedDiscardIndices = [];
+
+      GameData.jotaroChips = 1000;
+      GameData.darbyChips = 2000;
+      GameData.pot = 0;
+      GameData.currentBetToCall = 0;
+      GameData.jotaroCardsFaceUp = true;
+      GameData.starPlatinumCharges = 3;
+      GameData.avdolAvailableThisHand = true;
+      GameData.dealerIsBoy = false;
+      GameData.handSubStage = "READY";
+      GameData.finalRaiseLevel = 0;
+      GameData.isBusyAnimating = false;
+
+      darbyAI.confidence = 85;
+      darbyAI.doubt = 10;
+      darbyAI.suspicion = 15;
+      darbyAI.handStrength = 0;
+      darbyAI.cheatDetected = false;
+      darbyAI.cheatExposed = false;
+      darbyAI.stuntSucceeded = false;
+      darbyAI.keptCardsHidden = false;
+
+      initSoulChipsMap();
+
+      stateMachine.currentState = "INTRO";
+      stateMachine.previousState = "NONE";
+      eventHistoryStack.push("[INIT] Match initialized. 52-card deck shuffled via Fisher-Yates.");
+
+      document.getElementById("standFeedbackMsg").textContent = "";
+      document.getElementById("avdolQuoteBox").textContent =
+        "\"Watch his hands closely, Jotaro. D'Arby never plays a fair game when souls are on the table.\"";
+      document.getElementById("endingModal").classList.remove("open");
+      document.getElementById("evidenceModal").classList.remove("open");
+
+      renderIntroPhase();
+      updateAllUI();
+    }
+
+    function stopAllTimers() {
+      if (GameData.timingRafId) {
+        cancelAnimationFrame(GameData.timingRafId);
+        GameData.timingRafId = null;
+      }
+      if (GameData.qteIntervalId) {
+        clearInterval(GameData.qteIntervalId);
+        GameData.qteIntervalId = null;
+      }
+      GameData.timingActive = false;
+      GameData.qteActive = false;
+      document.getElementById("timingGaugeWrapper").classList.remove("visible");
+      document.getElementById("qteAlertBox").classList.remove("visible");
+      document.getElementById("visualDeckStack").classList.remove("cheating-motion");
+      document.getElementById("btnStarPlatinum").classList.remove("window-ready");
+    }
+
+    /* ==========================================================================
+       SECTION F: PHASE CONTROLLERS & STORY PROGRESSION
+       ========================================================================== */
+
+    // 1. INTRO PHASE
+    function renderIntroPhase() {
+      setDialogue(
+        "DANIEL J. D'ARBY",
+        "\"Welcome to my table, Jotaro. I already hold Polnareff's and Joseph Joestar's souls inside these two chips. Let's begin with an opening deal—I'll deal the cards myself.\""
+      );
+      setConsequencePreview(
+        "Phase 1 Preview: D'Arby will deal the opening cards himself. Keep your finger on [SPACE] or the Star Platinum button to catch any sleight-of-hand!"
+      );
+
+      renderActionButtons([
+        {
+          label: "▶ START MATCH & WATCH D'ARBY DEAL",
+          cls: "primary",
+          onClick: () => startOpeningCheatingSequence()
+        },
+        {
+          label: "📖 VIEW POKER RULES & SHORTCUTS",
+          cls: "",
+          onClick: () => document.getElementById("rulesModal").classList.add("open")
+        }
+      ]);
+    }
+
+    // 2. OPENING SCENE: DETECT D'ARBY CHEATING (Section 5)
+    function startOpeningCheatingSequence() {
+      stateMachine.transitionTo("CHEATING_SEQUENCE", "D'Arby begins dealing");
+      GameData.handSubStage = "DEALING";
+      GameData.timingAttemptedThisWindow = false;
+      GameData.pot = 200; // 100 ante each
+      GameData.jotaroChips -= 100;
+      GameData.darbyChips -= 100;
+      SoundFX.chipBet();
+
+      // Prepare rigged opening deal where D'Arby slips himself Four Aces / Full House from bottom
+      deck = createStandardDeck();
+      shuffleDeckFisherYates(deck);
+
+      // Extract specific cards for the opening deal to demonstrate D'Arby's bottom deal
+      jotaroHand = [];
+      darbyHand = [];
+
+      const jotaroOpening = pullCardsByCode(["10S", "10H", "JC", "8D", "4S"]); // One Pair of 10s
+      const darbyCheatCards = pullCardsByCode(["AS", "AH", "AD", "KC", "KH"]); // Full House Aces full of Kings
+
+      // Enqueue cards into dealQueue (FIFO Queue Data Structure in action!)
+      dealQueue.clear();
+      for (let i = 0; i < 5; i++) {
+        dealQueue.enqueue({ target: "JOTARO", card: jotaroOpening[i], step: i * 2 + 1 });
+        dealQueue.enqueue({ target: "DARBY", card: darbyCheatCards[i], step: i * 2 + 2 });
+      }
+      eventHistoryStack.push(`[QUEUE] Enqueued 10 cards into dealQueue for opening deal.`);
+
+      setDialogue(
+        "NARRATOR",
+        "D'Arby smoothly riffles the deck. Watch the timing bar! When his lower fingers slide under the deck (Gold Zone: 43%–76%), activate STAR PLATINUM [SPACE]!"
+      );
+      setConsequencePreview(
+        "TIMING CHALLENGE: Press [SPACE] or click 'STAR PLATINUM!' only when the cursor enters the gold zone. Early or late activation wastes a charge!"
+      );
+      renderActionButtons([
+        {
+          label: "⚡ ACTIVATE STAR PLATINUM NOW! [SPACE]",
+          cls: "bluff-special",
+          onClick: () => handleStarPlatinumActivation()
+        }
+      ]);
+
+      runOpeningDealTimingAnimation();
+      updateAllUI();
+    }
+
+    function pullCardsByCode(codes) {
+      const result = [];
+      for (const code of codes) {
+        const idx = deck.findIndex(c => c.id === code);
+        if (idx !== -1) {
+          result.push(deck.splice(idx, 1)[0]);
+        } else {
+          result.push(deck.pop());
+        }
+      }
+      return result;
+    }
+
+    function runOpeningDealTimingAnimation() {
+      GameData.timingActive = true;
+      GameData.timingMode = "OPENING_CHEAT";
+      GameData.timingProgress = 0;
+
+      const wrapper = document.getElementById("timingGaugeWrapper");
+      const cursor = document.getElementById("timingCursor");
+      const title = document.getElementById("timingGaugeTitle");
+      const zoneText = document.getElementById("timingZoneIndicator");
+      const deckEl = document.getElementById("visualDeckStack");
+      const spBtn = document.getElementById("btnStarPlatinum");
+
+      title.textContent = "⚡ OPENING DEAL — WATCH FOR D'ARBY'S BOTTOM DEAL!";
+      wrapper.classList.add("visible");
+
+      const totalDurationMs = 4600; // 4.6 seconds total deal animation
+      const startTime = performance.now();
+      let lastDealtStep = 0;
+
+      function step(now) {
+        if (!GameData.timingActive) return;
+        const elapsed = now - startTime;
+        const pct = Math.min(100, (elapsed / totalDurationMs) * 100);
+        GameData.timingProgress = pct;
+        cursor.style.left = `calc(${pct}% - 3px)`;
+
+        // Dequeue cards progressively from dealQueue every ~9% of progress
+        const targetStep = Math.min(10, Math.floor(pct / 9.2));
+        while (lastDealtStep < targetStep && !dealQueue.isEmpty()) {
+          const nextDeal = dealQueue.dequeue();
+          if (nextDeal.target === "JOTARO") {
+            jotaroHand.push(nextDeal.card);
+          } else {
+            darbyHand.push(nextDeal.card);
+          }
+          lastDealtStep++;
+          SoundFX.cardDeal();
+          renderTableCards();
+          updateInspectorPanel();
+        }
+
+        // Visual cues during sweet spot (43% to 76%)
+        if (pct >= 43 && pct <= 76) {
+          deckEl.classList.add("cheating-motion");
+          spBtn.classList.add("window-ready");
+          zoneText.textContent = "🔥 SUSPICIOUS BOTTOM SLIDE! PRESS [SPACE] NOW!";
+          zoneText.style.color = "#f5c542";
+        } else {
+          deckEl.classList.remove("cheating-motion");
+          spBtn.classList.remove("window-ready");
+          zoneText.textContent = pct < 43 ? "Wait for suspicious finger motion..." : "Motion passed!";
+          zoneText.style.color = "#cbd5e1";
+        }
+
+        if (pct < 100) {
+          GameData.timingRafId = requestAnimationFrame(step);
+        } else {
+          // Deal finished without successful detection
+          finishOpeningDealWithoutCatch();
+        }
+      }
+
+      GameData.timingRafId = requestAnimationFrame(step);
+    }
+
+    function finishOpeningDealWithoutCatch() {
+      // Flush any remaining cards in dealQueue
+      while (!dealQueue.isEmpty()) {
+        const nextDeal = dealQueue.dequeue();
+        if (nextDeal.target === "JOTARO") jotaroHand.push(nextDeal.card);
+        else darbyHand.push(nextDeal.card);
+      }
+      stopAllTimers();
+      renderTableCards();
+      proceedToFirstHand();
+    }
+
+    /**
+     * Handles Star Platinum button / [SPACE] press for both Application A and Application B
+     */
+    function handleStarPlatinumActivation() {
+      if (GameData.starPlatinumCharges <= 0) {
+        setStandFeedback("No Star Platinum charges remaining!");
+        SoundFX.standFail();
+        return;
+      }
+
+      if (!GameData.timingActive) {
+        setStandFeedback("Wait for an active timing window (Opening Deal or Final Showdown)!");
+        return;
+      }
+
+      if (GameData.timingAttemptedThisWindow) {
+        setStandFeedback("Star Platinum was already used during this timing window!");
+        return;
+      }
+
+      GameData.timingAttemptedThisWindow = true;
+      GameData.starPlatinumCharges--;
+      const pct = GameData.timingProgress;
+
+      // APPLICATION A: Opening Cheat Detection
+      if (GameData.timingMode === "OPENING_CHEAT") {
+        if (pct < 43) {
+          // TOO EARLY
+          SoundFX.standFail();
+          const msg = "Star Platinum returned too soon. You saw nothing useful.";
+          setStandFeedback("⚠️ " + msg);
+          setDialogue("STAR PLATINUM", `“${msg}”`);
+          eventHistoryStack.push(`[STAND] Opening Cheat Detection FAILED (Too Early at ${Math.round(pct)}%).`);
+          updateAllUI();
+        } else if (pct > 76) {
+          // TOO LATE
+          SoundFX.standFail();
+          const msg = "Too late! His hand has already moved. You couldn't see what happened.";
+          setStandFeedback("⚠️ " + msg);
+          setDialogue("STAR PLATINUM", `“${msg}”`);
+          eventHistoryStack.push(`[STAND] Opening Cheat Detection FAILED (Too Late at ${Math.round(pct)}%).`);
+          updateAllUI();
+        } else {
+          // CORRECT TIMING WINDOW (43% - 76%)
+          while (!dealQueue.isEmpty()) {
+            const nextDeal = dealQueue.dequeue();
+            if (nextDeal.target === "JOTARO") jotaroHand.push(nextDeal.card);
+            else darbyHand.push(nextDeal.card);
+          }
+          stopAllTimers();
+          triggerCheatDetectedSuccess(Math.round(pct));
+        }
+      }
+      // APPLICATION B: Final Showdown Psychological Demonstration
+      else if (GameData.timingMode === "FINAL_STUNT") {
+        stopAllTimers();
+        if (pct < 43) {
+          SoundFX.standFail();
+          const msg = "Too early! D'Arby wasn't focusing on your hands yet—no psychological effect.";
+          setStandFeedback("⚠️ " + msg);
+          setDialogue("JOTARO KUJO", `(${msg})`);
+          eventHistoryStack.push(`[STAND] Final Showdown Stunt FAILED (Too Early at ${Math.round(pct)}%).`);
+        } else if (pct > 76) {
+          SoundFX.standFail();
+          const msg = "Too late! The moment passed before Star Platinum acted—no psychological effect.";
+          setStandFeedback("⚠️ " + msg);
+          setDialogue("JOTARO KUJO", `(${msg})`);
+          eventHistoryStack.push(`[STAND] Final Showdown Stunt FAILED (Too Late at ${Math.round(pct)}%).`);
+        } else {
+          // SUCCESSFUL PRECISION DEMONSTRATION!
+          SoundFX.standSuccess();
+          flashStandFreezeEffect();
+          darbyAI.stuntSucceeded = true;
+          darbyAI.doubt += 35;
+          darbyAI.confidence -= 24;
+          darbyAI.suspicion += 30;
+          darbyAI.clampMetrics();
+
+          setStandFeedback("★ PRECISION DEMONSTRATION SUCCEEDED! D'Arby's doubt skyrocketed!");
+          setDialogue(
+            "DANIEL J. D'ARBY",
+            "\"W-What?! Wait a second! When did Jotaro light a cigarette and pour a glass of juice?! I didn't even see his finger twitch! Could Star Platinum have swapped his cards too?!\""
+          );
+          eventHistoryStack.push(`[STAND] Final Precision Stunt SUCCEEDED at ${Math.round(pct)}%! D'Arby Doubt +35.`);
+        }
+        renderFinalShowdownBettingStage();
+        updateAllUI();
+      }
+    }
+
+    function triggerCheatDetectedSuccess(pct) {
+      SoundFX.standSuccess();
+      flashStandFreezeEffect();
+
+      darbyAI.cheatDetected = true;
+      darbyAI.suspicion += 15;
+      darbyAI.clampMetrics();
+
+      // Automatically record Persistent Observation 01 in Jotaro's Notes
+      const exactNoteTitle = "OBSERVATION 01 — BOTTOM DEALING";
+      const exactNoteBody =
+        "D'Arby slipped a card from the bottom of the deck into his hand. He may have manipulated his cards to obtain a stronger hand. Remember this when judging his confidence and deciding whether to call or raise.";
+
+      if (!evidenceNotes.some(n => n.title === exactNoteTitle)) {
+        evidenceNotes.push({ title: exactNoteTitle, body: exactNoteBody });
+      }
+
+      document.getElementById("btnReviewDiagram").style.display = "inline-flex";
+      setStandFeedback("★ BOTTOM DEAL DETECTED! Persistent note saved to Evidence Log.");
+      eventHistoryStack.push(`[STAND] Bottom Deal CAUGHT at ${pct}%! Observation 01 saved.`);
+
+      // Open the mandatory visual explanation modal first so the player clearly understands the cheat
+      document.getElementById("evidenceModal").classList.add("open");
+      updateAllUI();
+    }
+
+    // 3. QUICK-TIME EVENT: CALL OUT THE CHEATING (Section 6)
+    function startCallOutQTE() {
+      stateMachine.transitionTo("EVIDENCE_QTE", "Accusation QTE started");
+      GameData.qteActive = true;
+      GameData.qteProgress = 100;
+
+      const qteBox = document.getElementById("qteAlertBox");
+      const qteFill = document.getElementById("qteTimerFill");
+      qteBox.classList.add("visible");
+
+      setDialogue(
+        "STAR PLATINUM",
+        "YOU CAUGHT HIM! Press [E] or click the button within 2.2 seconds to grab his finger and publicly expose his bottom deal!"
+      );
+      renderActionButtons([]);
+
+      const durationMs = 2200;
+      const stepMs = 40;
+      const decrement = (stepMs / durationMs) * 100;
+
+      GameData.qteIntervalId = setInterval(() => {
+        GameData.qteProgress -= decrement;
+        qteFill.style.width = `${Math.max(0, GameData.qteProgress)}%`;
+
+        if (GameData.qteProgress <= 0) {
+          resolveCallOutQTE(false);
+        }
+      }, stepMs);
+
+      updateAllUI();
+    }
+
+    function resolveCallOutQTE(succeeded) {
+      if (!GameData.qteActive) return;
+      stopAllTimers();
+
+      if (succeeded) {
+        SoundFX.qteSuccess();
+        flashStandFreezeEffect();
+        darbyAI.cheatExposed = true;
+        darbyAI.confidence -= 26;
+        darbyAI.doubt += 22;
+        darbyAI.clampMetrics();
+        GameData.dealerIsBoy = true;
+
+        // Because D'Arby was publicly exposed, the cheated hand is thrown out and re-dealt fairly by the boy!
+        discardPile.push(...jotaroHand, ...darbyHand);
+        jotaroHand = [];
+        darbyHand = [];
+        for (let i = 0; i < 5; i++) {
+          jotaroHand.push(deck.pop());
+          darbyHand.push(deck.pop());
+        }
+
+        eventHistoryStack.push("[QTE] SUCCESS! D'Arby publicly exposed. Confidence -26, Dealer Boy takes over.");
+        setDialogue(
+          "JOTARO KUJO",
+          "\"ORA! Caught you red-handed, D'Arby. You slid that card from the bottom of the deck—or do you want Star Platinum to snap your index finger? Let that boy over there deal the cards from now on.\""
+        );
+      } else {
+        SoundFX.standFail();
+        darbyAI.cheatExposed = false;
+        darbyAI.confidence -= 5;
+        darbyAI.clampMetrics();
+        GameData.dealerIsBoy = true;
+
+        eventHistoryStack.push("[QTE] EXPIRED! Cheat not exposed publicly, but Observation 01 retained in Notes.");
+        setDialogue(
+          "DANIEL J. D'ARBY",
+          "\"Hmph, you were staring intensely at my fingers, Jotaro, yet you said nothing in time. Still, as a gentleman, I'll let this local boy deal the subsequent hands—after we play out this opening hand!\""
+        );
+      }
+
+      proceedToFirstHand();
+    }
+
+    // 4. FIRST HAND: REGULAR POKER & LEARNING THE STAKES (Section 11)
+    function proceedToFirstHand() {
+      stateMachine.transitionTo("FIRST_HAND", "Entering First Regular Hand");
+      GameData.handSubStage = "BETTING";
+      GameData.avdolAvailableThisHand = true;
+      GameData.currentBetToCall = 100;
+      GameData.dealerIsBoy = true;
+
+      document.getElementById("narrativeStakeBanner").innerHTML =
+        "🪙 Stakes: Hand 1 — Chip Pot (200 Chips) &amp; Reading D'Arby";
+
+      if (darbyAI.cheatExposed) {
+        setConsequencePreview(
+          "Hand 1 (Fair Deal): Because you exposed D'Arby's bottom deal, the Dealer Boy dealt a fresh fair hand. Choose to Call (100), Raise (+200), or Fold."
+        );
+      } else if (darbyAI.cheatDetected) {
+        setConsequencePreview(
+          "Hand 1 (Warning — Check Jotaro's Notes!): You saw D'Arby bottom-deal this hand, though you didn't expose him in time. His hand is likely rigged!"
+        );
+      } else {
+        setConsequencePreview(
+          "Hand 1: Inspect your 5-card poker hand and decide whether to Call (100 chips), Raise (+200 chips), or Fold."
+        );
+      }
+
+      renderFirstHandActions();
+      updateAllUI();
+    }
+
+    function renderFirstHandActions() {
+      const myEval = evaluatePokerHand(jotaroHand);
+      renderActionButtons([
+        {
+          label: `🃏 ${GameData.jotaroCardsFaceUp ? "HIDE MY CARDS" : "INSPECT MY CARDS"}`,
+          cls: "",
+          onClick: () => {
+            GameData.jotaroCardsFaceUp = !GameData.jotaroCardsFaceUp;
+            renderFirstHandActions();
+            updateAllUI();
+          }
+        },
+        {
+          label: `✅ CALL BET (100 Chips) [${myEval.categoryName}]`,
+          cls: "primary",
+          onClick: () => resolveRegularHandShowdown("CALL", 100, "FIRST_HAND")
+        },
+        {
+          label: "🔥 RAISE (+250 Chips)",
+          cls: "bluff-special",
+          onClick: () => resolveRegularHandShowdown("RAISE", 250, "FIRST_HAND")
+        },
+        {
+          label: "🏳️ FOLD HAND (Save Chips)",
+          cls: "danger",
+          onClick: () => resolveRegularHandShowdown("FOLD", 0, "FIRST_HAND")
+        }
+      ]);
+    }
+
+    // 5. SECOND HAND: POLNAREFF'S SOUL AT STAKE (Sections 10 & 11)
+    function startSecondHand() {
+      stateMachine.transitionTo("SECOND_HAND", "Polnareff's Soul Wagered");
+      GameData.handSubStage = "EXCHANGE";
+      GameData.avdolAvailableThisHand = true;
+      GameData.jotaroCardsFaceUp = true;
+      selectedDiscardIndices = [];
+
+      // Move previous cards to discard pile and deal fresh Fisher-Yates hand via Dealer Boy
+      discardPile.push(...jotaroHand, ...darbyHand);
+      jotaroHand = [];
+      darbyHand = [];
+
+      if (deck.length < 15) {
+        deck = createStandardDeck();
+        shuffleDeckFisherYates(deck);
+        discardPile = [];
+      }
+
+      // Enqueue & deal 5 cards each from the neutral Dealer Boy
+      dealQueue.clear();
+      for (let i = 0; i < 5; i++) {
+        dealQueue.enqueue({ target: "JOTARO", card: deck.pop() });
+        dealQueue.enqueue({ target: "DARBY", card: deck.pop() });
+      }
+      while (!dealQueue.isEmpty()) {
+        const item = dealQueue.dequeue();
+        if (item.target === "JOTARO") jotaroHand.push(item.card);
+        else darbyHand.push(item.card);
+      }
+      SoundFX.cardDeal();
+
+      // Update Polnareff's Soul Chip in soulChipsMap to AT STAKE
+      const polChip = soulChipsMap.get("POLNAREFF");
+      polChip.status = "AT STAKE";
+      soulChipsMap.set("POLNAREFF", polChip);
+
+      GameData.pot = 300;
+      GameData.jotaroChips = Math.max(0, GameData.jotaroChips - 150);
+      GameData.darbyChips = Math.max(0, GameData.darbyChips - 150);
+      GameData.currentBetToCall = 150;
+
+      document.getElementById("narrativeStakeBanner").innerHTML =
+        "🔵 SOUL AT STAKE: JEAN PIERRE POLNAREFF'S SOUL CHIP (+ 300 Chips)";
+
+      setDialogue(
+        "DANIEL J. D'ARBY",
+        "\"Now the real game begins! The boy has dealt fairly from a shuffled deck. For this second hand, I wager Jean Pierre Polnareff's soul chip! Click up to 2 cards in your hand if you wish to draw replacements, then place your bet.\""
+      );
+      setConsequencePreview(
+        "Hand 2 (Polnareff's Soul Chip at Stake): Click up to 2 of your cards to mark them for exchange with the Dealer Boy, or keep your hand and bet!"
+      );
+
+      eventHistoryStack.push("[SOUL MAP] Polnareff's Soul status -> AT STAKE.");
+      renderSecondHandActions();
+      updateAllUI();
+    }
+
+    function renderSecondHandActions() {
+      const inExchange = GameData.handSubStage === "EXCHANGE";
+      const buttons = [];
+
+      if (inExchange) {
+        buttons.push({
+          label: selectedDiscardIndices.length > 0
+            ? `🔄 DRAW ${selectedDiscardIndices.length} NEW CARD(S) FROM BOY`
+            : "✋ STAND PAT (KEEP ALL 5 CARDS)",
+          cls: "primary",
+          onClick: () => executeSecondHandDraw()
+        });
+      }
+
+      buttons.push(
+        {
+          label: "✅ CALL WAGER (150 Chips)",
+          cls: "primary",
+          onClick: () => resolveRegularHandShowdown("CALL", 150, "SECOND_HAND")
+        },
+        {
+          label: "🔥 RAISE WAGER (+300 Chips)",
+          cls: "bluff-special",
+          onClick: () => resolveRegularHandShowdown("RAISE", 300, "SECOND_HAND")
+        },
+        {
+          label: "🏳️ FOLD HAND",
+          cls: "danger",
+          onClick: () => resolveRegularHandShowdown("FOLD", 0, "SECOND_HAND")
+        }
+      );
+
+      renderActionButtons(buttons);
+    }
+
+    function executeSecondHandDraw() {
+      if (GameData.handSubStage !== "EXCHANGE") return;
+      GameData.handSubStage = "BETTING";
+
+      if (selectedDiscardIndices.length > 0) {
+        selectedDiscardIndices.sort((a, b) => b - a);
+        for (const idx of selectedDiscardIndices) {
+          discardPile.push(jotaroHand[idx]);
+          jotaroHand[idx] = deck.pop();
+        }
+        const drawnCount = selectedDiscardIndices.length;
+        selectedDiscardIndices = [];
+        SoundFX.cardDeal();
+        eventHistoryStack.push(`[ARRAY] Exchanged ${drawnCount} card(s) from deck into jotaroHand.`);
+        setDialogue("THE DEALER BOY", `\"I have dealt you ${drawnCount} replacement card(s), sir. Please make your wager.\"`);
+      } else {
+        setDialogue("JOTARO KUJO", "\"I'll keep these five cards. Let's settle this hand.\"");
+      }
+
+      renderSecondHandActions();
+      updateAllUI();
+    }
+
+    /**
+     * Resolves Hand 1 or Hand 2 using the genuine 5-card poker evaluator.
+     */
+    function resolveRegularHandShowdown(playerAction, betCost, phaseName) {
+      GameData.handSubStage = "RESOLVED";
+      selectedDiscardIndices = [];
+
+      if (playerAction === "FOLD") {
+        GameData.darbyChips += GameData.pot;
+        eventHistoryStack.push(`[BET] Jotaro FOLDED in ${phaseName}. D'Arby takes pot (${GameData.pot}).`);
+
+        if (phaseName === "FIRST_HAND" && darbyAI.cheatDetected && !darbyAI.cheatExposed) {
+          darbyAI.doubt += 12;
+          darbyAI.clampMetrics();
+          setDialogue(
+            "JOTARO KUJO",
+            "\"I fold. Since I saw you slip that bottom card earlier, I'm not throwing chips into a rigged hand.\""
+          );
+        } else {
+          darbyAI.confidence += 6;
+          darbyAI.clampMetrics();
+          setDialogue("DANIEL J. D'ARBY", "\"A cautious fold, Jotaro! That pot is mine.\"");
+        }
+
+        if (phaseName === "SECOND_HAND") {
+          const polChip = soulChipsMap.get("POLNAREFF");
+          polChip.status = "HELD BY D'ARBY";
+          soulChipsMap.set("POLNAREFF", polChip);
+        }
+
+        GameData.pot = 0;
+        renderNextHandTransitionButton(phaseName);
+        updateAllUI();
+        return;
+      }
+
+      // Player Called or Raised
+      const actualBet = Math.min(GameData.jotaroChips, betCost);
+      GameData.jotaroChips -= actualBet;
+      GameData.pot += actualBet;
+      SoundFX.chipBet();
+
+      const aiAction = darbyAI.decideRegularHandAction(betCost);
+
+      // Reveal both hands for the showdown
+      GameData.jotaroCardsFaceUp = true;
+      const jotaroEval = evaluatePokerHand(jotaroHand);
+      const darbyEval = evaluatePokerHand(darbyHand);
+
+      if (aiAction === "FOLD" && playerAction === "RAISE") {
+        GameData.jotaroChips += GameData.pot;
+        darbyAI.confidence -= 12;
+        darbyAI.doubt += 14;
+        darbyAI.clampMetrics();
+
+        if (phaseName === "SECOND_HAND") {
+          const polChip = soulChipsMap.get("POLNAREFF");
+          polChip.status = "RECOVERED";
+          soulChipsMap.set("POLNAREFF", polChip);
+          eventHistoryStack.push("[SOUL MAP] Polnareff's Soul RECOVERED via D'Arby fold!");
+        }
+
+        setDialogue(
+          "DANIEL J. D'ARBY",
+          `\"Tch... With a raise like that, I won't risk calling with ${darbyEval.description}. I fold this hand!\"`
+        );
+        GameData.pot = 0;
+        renderNextHandTransitionButton(phaseName);
+        updateAllUI();
+        return;
+      }
+
+      // D'Arby Calls! Match chips into pot and run comparePokerHands()
+      GameData.darbyChips = Math.max(0, GameData.darbyChips - actualBet);
+      GameData.pot += actualBet;
+
+      const cmp = comparePokerHands(jotaroHand, darbyHand);
+
+      if (cmp >= 0) {
+        // Jotaro wins showdown!
+        SoundFX.qteSuccess();
+        GameData.jotaroChips += GameData.pot;
+        darbyAI.confidence -= 16;
+        darbyAI.doubt += 16;
+        darbyAI.clampMetrics();
+
+        let soulMsg = "";
+        if (phaseName === "SECOND_HAND") {
+          const polChip = soulChipsMap.get("POLNAREFF");
+          polChip.status = "RECOVERED";
+          soulChipsMap.set("POLNAREFF", polChip);
+          soulMsg = " Jean Pierre Polnareff's Soul Chip is RECOVERED!";
+          eventHistoryStack.push("[SOUL MAP] Polnareff's Soul status -> RECOVERED!");
+        }
+
+        setDialogue(
+          "SHOWDOWN RESULT — JOTARO WINS!",
+          `Jotaro's ${jotaroEval.description} beats D'Arby's ${darbyEval.description}! You win ${GameData.pot} chips.${soulMsg}`
+        );
+        eventHistoryStack.push(`[POKER] Jotaro (${jotaroEval.categoryName}) beat D'Arby (${darbyEval.categoryName}).`);
+      } else {
+        // D'Arby wins showdown
+        SoundFX.standFail();
+        GameData.darbyChips += GameData.pot;
+        darbyAI.confidence += 8;
+        darbyAI.clampMetrics();
+
+        let soulMsg = "";
+        if (phaseName === "SECOND_HAND") {
+          const polChip = soulChipsMap.get("POLNAREFF");
+          polChip.status = "HELD BY D'ARBY";
+          soulChipsMap.set("POLNAREFF", polChip);
+          soulMsg = " Polnareff's Soul Chip remains held by D'Arby—you must win it back in the Final Showdown!";
+        }
+
+        setDialogue(
+          "SHOWDOWN RESULT — D'ARBY WINS HAND",
+          `D'Arby's ${darbyEval.description} beats Jotaro's ${jotaroEval.description}.${soulMsg}`
+        );
+        eventHistoryStack.push(`[POKER] D'Arby (${darbyEval.categoryName}) beat Jotaro (${jotaroEval.categoryName}).`);
+      }
+
+      GameData.pot = 0;
+      renderNextHandTransitionButton(phaseName);
+      updateAllUI();
+    }
+
+    function renderNextHandTransitionButton(phaseName) {
+      if (phaseName === "FIRST_HAND") {
+        setConsequencePreview("Hand 1 Complete: Proceed to Hand 2 where Polnareff's Soul Chip is put at stake.");
+        renderActionButtons([
+          {
+            label: "▶ PROCEED TO HAND 2 (POLNAREFF'S SOUL AT STAKE)",
+            cls: "primary",
+            onClick: () => startSecondHand()
+          }
+        ]);
+      } else if (phaseName === "SECOND_HAND") {
+        setConsequencePreview("Hand 2 Complete: Proceed to the climactic Final Showdown for Joseph Joestar's Soul!");
+        renderActionButtons([
+          {
+            label: "🔥 ENTER FINAL SHOWDOWN (JOSEPH'S SOUL AT STAKE)",
+            cls: "bluff-special",
+            onClick: () => startFinalShowdown()
+          }
+        ]);
+      }
+    }
+
+    /* ==========================================================================
+       SECTION G: FINAL SHOWDOWN — THE MAIN EVENT (Section 12)
+       ========================================================================== */
+
+    function saveFinalShowdownCheckpoint() {
+      checkpointStack.push({
+        jotaroChips: GameData.jotaroChips,
+        darbyChips: GameData.darbyChips,
+        starPlatinumCharges: Math.max(1, GameData.starPlatinumCharges),
+        confidence: darbyAI.confidence,
+        doubt: darbyAI.doubt,
+        suspicion: darbyAI.suspicion,
+        cheatDetected: darbyAI.cheatDetected,
+        cheatExposed: darbyAI.cheatExposed,
+        polnareffStatus: soulChipsMap.get("POLNAREFF").status
+      });
+      eventHistoryStack.push("[STACK] Pushed pre-Final Showdown checkpoint onto checkpointStack.");
+    }
+
+    function restoreFinalShowdownCheckpoint() {
+      const snap = checkpointStack.peek();
+      if (snap) {
+        GameData.jotaroChips = snap.jotaroChips;
+        GameData.darbyChips = snap.darbyChips;
+        GameData.starPlatinumCharges = snap.starPlatinumCharges;
+        darbyAI.confidence = snap.confidence;
+        darbyAI.doubt = snap.doubt;
+        darbyAI.suspicion = snap.suspicion;
+        darbyAI.cheatDetected = snap.cheatDetected;
+        darbyAI.cheatExposed = snap.cheatExposed;
+        const pol = soulChipsMap.get("POLNAREFF");
+        pol.status = snap.polnareffStatus;
+        soulChipsMap.set("POLNAREFF", pol);
+        eventHistoryStack.push("[STACK] Popped checkpoint to retry Final Showdown.");
+      } else {
+        GameData.starPlatinumCharges = Math.max(1, GameData.starPlatinumCharges);
+      }
+      document.getElementById("endingModal").classList.remove("open");
+      startFinalShowdown(true);
+    }
+
+    function startFinalShowdown(isRetry = false) {
+      if (!isRetry) {
+        saveFinalShowdownCheckpoint();
+      }
+      stateMachine.transitionTo("FINAL_SHOWDOWN", "Climactic Showdown");
+      stopAllTimers();
+
+      // Ensure player has at least 1 Star Platinum charge to experience the final timing stunt
+      if (GameData.starPlatinumCharges < 1) {
+        GameData.starPlatinumCharges = 1;
+      }
+
+      GameData.avdolAvailableThisHand = true;
+      GameData.handSubStage = "CARD_CHOICE";
+      GameData.jotaroCardsFaceUp = false; // Face down by default!
+      GameData.finalRaiseLevel = 0;
+      darbyAI.keptCardsHidden = false;
+      darbyAI.stuntSucceeded = false;
+
+      // Put Joseph Joestar's Soul Chip AT STAKE
+      const josephChip = soulChipsMap.get("JOSEPH");
+      josephChip.status = "AT STAKE";
+      soulChipsMap.set("JOSEPH", josephChip);
+
+      // Scripted Final Hands (Section 12 Requirement):
+      // D'Arby receives Four Kings + unrelated kicker (9 of Spades).
+      // Jotaro receives a deliberately weak High-Card Jack hand with no pair, no straight, no flush.
+      discardPile.push(...jotaroHand, ...darbyHand);
+      deck = createStandardDeck();
+
+      darbyHand = pullCardsByCode(["KS", "KH", "KD", "KC", "9S"]);
+      jotaroHand = pullCardsByCode(["2C", "5D", "7S", "9H", "JC"]);
+      SoundFX.cardDeal();
+
+      GameData.pot = 1000;
+      GameData.currentBetToCall = 500;
+
+      document.getElementById("narrativeStakeBanner").innerHTML =
+        "🟣 FINAL SHOWDOWN STAKE: JOSEPH JOESTAR'S SOUL CHIP &amp; ALL REMAINING SOULS!";
+
+      setDialogue(
+        "AUDIENCE CUTAWAY — D'ARBY HOLDS FOUR KINGS!",
+        "\"Hahahaha! Look at my hand—Four Kings! Even if Jotaro drew well, nothing short of a Straight Flush could beat me... Wait. Why hasn't Jotaro looked at his cards yet?!\""
+      );
+      setConsequencePreview(
+        "CRITICAL DECISION (Step 1 of 2): Your 5 cards are lying FACE DOWN. In ordinary poker you cannot beat D'Arby's Four Kings. Will you keep your cards hidden to maximize psychological pressure, or peek at them?"
+      );
+
+      renderActionButtons([
+        {
+          label: "🕶️ KEEP MY CARDS HIDDEN (REFUSE TO LOOK — +BLUFF PRESSURE)",
+          cls: "bluff-special",
+          onClick: () => handleFinalCardInspectionChoice(true)
+        },
+        {
+          label: "👁️ PEEK AT MY CARDS (INSPECT HAND — REDUCES BLUFF)",
+          cls: "",
+          onClick: () => handleFinalCardInspectionChoice(false)
+        }
+      ]);
+
+      updateAllUI();
+    }
+
+    function handleFinalCardInspectionChoice(keepHidden) {
+      if (keepHidden) {
+        darbyAI.keptCardsHidden = true;
+        GameData.jotaroCardsFaceUp = false;
+        darbyAI.doubt += 24;
+        darbyAI.confidence -= 15;
+        darbyAI.suspicion += 25;
+        darbyAI.clampMetrics();
+
+        eventHistoryStack.push("[BLUFF] Jotaro chose KEEP MY CARDS HIDDEN. D'Arby Doubt +24.");
+        setDialogue(
+          "JOTARO KUJO",
+          "\"I don't even need to look at my cards, D'Arby. I'm playing this hand completely blind.\""
+        );
+      } else {
+        darbyAI.keptCardsHidden = false;
+        GameData.jotaroCardsFaceUp = true;
+        darbyAI.confidence += 10;
+        darbyAI.clampMetrics();
+
+        eventHistoryStack.push("[BLUFF] Jotaro peeked at his weak High-Card Jack hand.");
+        setDialogue(
+          "JOTARO KUJO",
+          "(Yare yare daze... High Card Jack—2♣, 5♦, 7♠, 9♥, J♣. It's a terrible hand. Only an overwhelming psychological bluff can break D'Arby now.)"
+        );
+      }
+
+      // Launch Step 2: Timed Star Platinum Demonstration Opportunity
+      startFinalShowdownStuntWindow();
+      updateAllUI();
+    }
+
+    function startFinalShowdownStuntWindow() {
+      GameData.handSubStage = "FINAL_STUNT_WINDOW";
+      GameData.timingActive = true;
+      GameData.timingMode = "FINAL_STUNT";
+      GameData.timingProgress = 0;
+      GameData.timingAttemptedThisWindow = false;
+
+      const wrapper = document.getElementById("timingGaugeWrapper");
+      const cursor = document.getElementById("timingCursor");
+      const title = document.getElementById("timingGaugeTitle");
+      const zoneText = document.getElementById("timingZoneIndicator");
+      const spBtn = document.getElementById("btnStarPlatinum");
+
+      title.textContent = "⚡ FINAL SHOWDOWN — STAR PLATINUM PSYCHOLOGICAL DEMONSTRATION!";
+      wrapper.classList.add("visible");
+
+      setConsequencePreview(
+        "TIMING OPPORTUNITY: D'Arby is staring unblinkingly at you! Press [SPACE] or 'STAR PLATINUM!' inside the Gold Zone (43%–76%) to perform an impossible speed stunt that shatters his certainty!"
+      );
+
+      renderActionButtons([
+        {
+          label: "⚡ TRIGGER STAR PLATINUM STUNT NOW! [SPACE]",
+          cls: "bluff-special",
+          onClick: () => handleStarPlatinumActivation()
+        },
+        {
+          label: "⏭️ SKIP DEMONSTRATION & GO TO FINAL BET",
+          cls: "",
+          onClick: () => {
+            stopAllTimers();
+            renderFinalShowdownBettingStage();
+            updateAllUI();
+          }
+        }
+      ]);
+
+      const totalDurationMs = 4200;
+      const startTime = performance.now();
+
+      function step(now) {
+        if (!GameData.timingActive) return;
+        const elapsed = now - startTime;
+        const pct = Math.min(100, (elapsed / totalDurationMs) * 100);
+        GameData.timingProgress = pct;
+        cursor.style.left = `calc(${pct}% - 3px)`;
+
+        if (pct >= 43 && pct <= 76) {
+          spBtn.classList.add("window-ready");
+          zoneText.textContent = "🔥 D'ARBY BLINKED! PRESS [SPACE] NOW!";
+          zoneText.style.color = "#f5c542";
+        } else {
+          spBtn.classList.remove("window-ready");
+          zoneText.textContent = pct < 43 ? "Wait for D'Arby's blink..." : "Moment passing!";
+          zoneText.style.color = "#cbd5e1";
+        }
+
+        if (pct < 100) {
+          GameData.timingRafId = requestAnimationFrame(step);
+        } else {
+          stopAllTimers();
+          renderFinalShowdownBettingStage();
+          updateAllUI();
+        }
+      }
+
+      GameData.timingRafId = requestAnimationFrame(step);
+    }
+
+    function renderFinalShowdownBettingStage() {
+      GameData.handSubStage = "FINAL_BET";
+
+      setConsequencePreview(
+        "FINAL WAGER (Step 2 of 2): Consult Avdol if needed, then choose your final bet. Remember: D'Arby holds Four Kings—only a decisive psychological bluff will force him to fold!"
+      );
+
+      renderActionButtons([
+        {
+          label: "🔥 ULTIMATE BLUFF: RAISE MY SOUL, KAKYOIN'S SOUL & AVDOL'S SOUL (+ DEMAND DIO'S STAND SECRET!)",
+          cls: "bluff-special",
+          onClick: () => executeFinalShowdownDecision(3)
+        },
+        {
+          label: "💰 RAISE ALL REMAINING CHIPS (MODERATE PRESSURE)",
+          cls: "primary",
+          onClick: () => executeFinalShowdownDecision(2)
+        },
+        {
+          label: "🪙 CAUTIOUS CALL / SMALL RAISE (+250 CHIPS — RISKY!)",
+          cls: "",
+          onClick: () => executeFinalShowdownDecision(1)
+        }
+      ]);
+    }
+
+    function executeFinalShowdownDecision(raiseLevel) {
+      GameData.finalRaiseLevel = raiseLevel;
+      SoundFX.chipBet();
+
+      const bluffScore = darbyAI.calculateFinalBluffStrength(raiseLevel);
+      const callThreshold = 65;
+
+      eventHistoryStack.push(
+        `[FINAL BLUFF] RaiseLevel=${raiseLevel}, Computed bluffStrength=${bluffScore} vs Threshold=${callThreshold}.`
+      );
+
+      if (bluffScore >= callThreshold) {
+        // VICTORY! D'Arby's composure shatters and he FOLDS!
+        darbyAI.confidence = 0;
+        darbyAI.doubt = 100;
+        darbyAI.clampMetrics();
+
+        // Recover BOTH Joseph's and Polnareff's souls!
+        soulChipsMap.forEach((chip, key) => {
+          chip.status = "RECOVERED";
+          soulChipsMap.set(key, chip);
+        });
+        eventHistoryStack.push("[VICTORY] D'Arby FOLDED Four Kings! All souls RECOVERED.");
+
+        // Reveal Jotaro's weak hand after D'Arby collapses
+        GameData.jotaroCardsFaceUp = true;
+        stateMachine.transitionTo("VICTORY", "D'Arby mentally collapsed and folded");
+        SoundFX.victoryFanfare();
+
+        setDialogue(
+          "DANIEL J. D'ARBY (MENTALLY SHATTERED — FOLDS!)",
+          "\"I... I c-ca... If Star Platinum switched his cards with a Straight Flush, I'll lose everything—and if I reveal DIO's secret, DIO will kill me! I... I FOLD!!\""
+        );
+
+        showEndingModal(true, bluffScore, callThreshold);
+      } else {
+        // DEFEAT! Bluff was insufficient; D'Arby steadies himself and CALLS!
+        GameData.jotaroCardsFaceUp = true;
+        stateMachine.transitionTo("DEFEAT", "D'Arby called the final bluff");
+        SoundFX.defeatChord();
+
+        const jotaroEval = evaluatePokerHand(jotaroHand);
+        const darbyEval = evaluatePokerHand(darbyHand);
+
+        setDialogue(
+          "DANIEL J. D'ARBY — \"I CALL!\"",
+          `\"You don't scare me, Jotaro! I CALL! My ${darbyEval.description} crushes your ${jotaroEval.description}! Your soul belongs to Osiris!\"`
+        );
+
+        showEndingModal(false, bluffScore, callThreshold);
+      }
+
+      updateAllUI();
+    }
+
+    function showEndingModal(isVictory, bluffScore, threshold) {
+      const modal = document.getElementById("endingModal");
+      const title = document.getElementById("endingTitle");
+      const sub = document.getElementById("endingSubtitle");
+      const body = document.getElementById("endingBody");
+      const retryBtn = document.getElementById("btnRetryFinalHand");
+
+      if (isVictory) {
+        title.textContent = "★ VICTORY! SOULS RECOVERED! ★";
+        title.style.color = "var(--gold)";
+        sub.textContent = `Bluff Strength: ${bluffScore} (Exceeded D'Arby's Break Threshold of ${threshold})`;
+        body.innerHTML = `
+          <p style="margin-bottom:8px;">Under overwhelming psychological pressure, <strong>Daniel J. D'Arby</strong> dropped his Four Kings and passed out before he could say "Call"!</p>
+          <p style="margin-bottom:8px;">As his Stand <strong>Osiris</strong> dissolves, both <strong>Joseph Joestar's</strong> and <strong>Jean Pierre Polnareff's</strong> captured souls burst free from their poker chips and return to their bodies!</p>
+          <p style="color:#a7f3d0;"><strong>Avdol flips over Jotaro's untouched cards:</strong> <em>"2♣, 5♦, 7♠, 9♥, J♣... Not even a single pair! Truly, Jotaro, if I ever gambled against you, I'd lose my shirt!"</em></p>
+        `;
+        retryBtn.style.display = "none";
+      } else {
+        title.textContent = "💀 DEFEAT — D'ARBY CALLED YOUR BLUFF";
+        title.style.color = "var(--crimson)";
+        sub.textContent = `Bluff Strength: ${bluffScore} (Needed ${threshold} to break D'Arby's Four Kings)`;
+        body.innerHTML = `
+          <p style="margin-bottom:8px;">D'Arby saw through the pressure and called! In a pure card showdown, his <strong>Four of a Kind (Kings)</strong> defeated Jotaro's <strong>High Card (Jack)</strong>.</p>
+          <p style="color:#fde68a;"><strong>How to guarantee victory on Retry:</strong></p>
+          <ul style="padding-left:18px;margin-top:4px;">
+            <li>Choose <strong>KEEP MY CARDS HIDDEN</strong> (+32 Bluff Score).</li>
+            <li>Trigger <strong>STAR PLATINUM [SPACE]</strong> inside the Gold Zone during the final stunt (+34 Bluff Score).</li>
+            <li>Select the <strong>ULTIMATE BLUFF (Soul Raise + DIO's Secret)</strong> (+30 Bluff Score).</li>
+          </ul>
+        `;
+        retryBtn.style.display = "inline-block";
+      }
+
+      modal.classList.add("open");
+    }
+
+    /* ==========================================================================
+       SECTION H: AVDOL'S CONTEXTUAL INSIGHT ABILITY (Section 8)
+       ========================================================================== */
+
+    function handleAskAvdol() {
+      if (!GameData.avdolAvailableThisHand) {
+        return;
+      }
+      GameData.avdolAvailableThisHand = false;
+      SoundFX.chipBet();
+
+      let advice = "";
+      const state = stateMachine.currentState;
+      const psych = darbyAI.getPsychStateLabel();
+
+      if (state === "FIRST_HAND" && darbyAI.cheatDetected && !darbyAI.cheatExposed) {
+        advice = "“Now you know how he dealt. Keep that in mind before trusting the strength of his hand.”";
+      } else if (psych === "DESPERATE" || darbyAI.doubt >= 60) {
+        advice = "“He's losing his composure. One more decisive move might be enough.”";
+      } else if (psych === "SHAKEN" || psych === "UNEASY") {
+        advice = "“He's watching your expression rather than the cards. Something has unsettled him.”";
+      } else if (state === "FINAL_SHOWDOWN") {
+        advice = "“Look at him. He's far too relaxed with his own cards—you cannot beat him with ordinary poker. Use pure psychological terror!”";
+      } else {
+        advice = "“Look at him. He's far too relaxed. He believes he has the advantage.”";
+      }
+
+      document.getElementById("avdolQuoteBox").textContent = advice;
+      eventHistoryStack.push(`[AVDOL] Read D'Arby in ${state} (${psych}): ${advice}`);
+      updateAllUI();
+    }
+
+    /* ==========================================================================
+       SECTION I: UI RENDERING & LIVE DATA STRUCTURES INSPECTOR UPDATES
+       ========================================================================== */
+
+    function setDialogue(speaker, text) {
+      dialogueQueue.enqueue({ speaker, text });
+      const current = dialogueQueue.dequeue();
+      document.getElementById("dialogueSpeaker").textContent = current.speaker;
+      document.getElementById("dialogueText").textContent = current.text;
+      document.getElementById("dialogueQueueHint").textContent = `Queue: ${dialogueQueue.size()} pending`;
+    }
+
+    function setConsequencePreview(text) {
+      document.getElementById("consequencePreview").textContent = text;
+    }
+
+    function setStandFeedback(text) {
+      document.getElementById("standFeedbackMsg").textContent = text;
+    }
+
+    function flashStandFreezeEffect() {
+      const fx = document.getElementById("standFreezeFx");
+      fx.classList.add("active");
+      setTimeout(() => fx.classList.remove("active"), 450);
+    }
+
+    function renderActionButtons(btnConfigs) {
+      const container = document.getElementById("actionButtonsContainer");
+      container.innerHTML = "";
+      for (const cfg of btnConfigs) {
+        const btn = document.createElement("button");
+        btn.className = `act-btn ${cfg.cls || ""}`;
+        btn.textContent = cfg.label;
+        btn.disabled = !!cfg.disabled;
+        btn.addEventListener("click", cfg.onClick);
+        container.appendChild(btn);
+      }
+    }
+
+    function renderTableCards() {
+      const darbyContainer = document.getElementById("darbyCardsContainer");
+      const jotaroContainer = document.getElementById("jotaroCardsContainer");
+      const darbyBadge = document.getElementById("darbyHandRankBadge");
+      const jotaroBadge = document.getElementById("jotaroHandRankBadge");
+
+      darbyContainer.innerHTML = "";
+      jotaroContainer.innerHTML = "";
+
+      const state = stateMachine.currentState;
+      const showDarbyFaceUp =
+        GameData.handSubStage === "RESOLVED" ||
+        state === "FINAL_SHOWDOWN" ||
+        state === "VICTORY" ||
+        state === "DEFEAT";
+
+      // Render D'Arby's Cards
+      darbyHand.forEach(card => {
+        const isXrayCutaway = state === "FINAL_SHOWDOWN";
+        const cardEl = createCardElement(card, showDarbyFaceUp, isXrayCutaway);
+        darbyContainer.appendChild(cardEl);
+      });
+
+      if (darbyHand.length === 5 && showDarbyFaceUp) {
+        const evalD = evaluatePokerHand(darbyHand);
+        darbyBadge.textContent = state === "FINAL_SHOWDOWN"
+          ? `Audience View: ${evalD.description}`
+          : evalD.description;
+      } else {
+        darbyBadge.textContent = darbyHand.length > 0 ? "Hidden (Face Down)" : "Waiting...";
+      }
+
+      // Render Jotaro's Cards
+      jotaroHand.forEach((card, idx) => {
+        const cardEl = createCardElement(card, GameData.jotaroCardsFaceUp, false);
+        if (selectedDiscardIndices.includes(idx)) {
+          cardEl.classList.add("selected-discard");
+        }
+        cardEl.addEventListener("click", () => {
+          // If in Hand 2 Exchange sub-stage, toggle card selection for discard (max 2)
+          if (state === "SECOND_HAND" && GameData.handSubStage === "EXCHANGE") {
+            const pos = selectedDiscardIndices.indexOf(idx);
+            if (pos !== -1) {
+              selectedDiscardIndices.splice(pos, 1);
+            } else if (selectedDiscardIndices.length < 2) {
+              selectedDiscardIndices.push(idx);
+            }
+            SoundFX.cardDeal();
+            renderSecondHandActions();
+            renderTableCards();
+          }
+        });
+        jotaroContainer.appendChild(cardEl);
+      });
+
+      if (jotaroHand.length === 5) {
+        if (GameData.jotaroCardsFaceUp) {
+          const evalJ = evaluatePokerHand(jotaroHand);
+          jotaroBadge.textContent = evalJ.description;
+        } else {
+          jotaroBadge.textContent = "Hidden (Face Down — Uninspected)";
+        }
+      } else {
+        jotaroBadge.textContent = "Waiting for deal...";
+      }
+    }
+
+    function createCardElement(card, isFaceUp, isAudienceXray) {
+      const div = document.createElement("div");
+      if (!isFaceUp) {
+        div.className = "playing-card face-down";
+        div.title = "Face-down card";
+        return div;
+      }
+
+      const suitClass = card.color === "red" ? "red-suit" : "black-suit";
+      div.className = `playing-card ${suitClass} ${isAudienceXray ? "audience-xray" : ""}`;
+      div.innerHTML = `
+        <div class="card-corner-top">${card.rank}<br>${card.suitSymbol}</div>
+        <div class="card-center-suit">${card.suitSymbol}</div>
+        <div class="card-corner-bottom">${card.rank}<br>${card.suitSymbol}</div>
+        ${isAudienceXray ? `<span class="xray-ribbon">AUDIENCE VIEW</span>` : ""}
+      `;
+      return div;
+    }
+
+    function renderSoulChipsPanel() {
+      const container = document.getElementById("soulChipsListContainer");
+      container.innerHTML = "";
+      let recoveredCount = 0;
+
+      soulChipsMap.forEach(chip => {
+        if (chip.status === "RECOVERED") recoveredCount++;
+
+        let statusClass = "status-HELD";
+        let tagClass = "tag-HELD";
+        if (chip.status === "AT STAKE") {
+          statusClass = "status-STAKE";
+          tagClass = "tag-STAKE";
+        } else if (chip.status === "RECOVERED") {
+          statusClass = "status-RECOVERED";
+          tagClass = "tag-RECOVERED";
+        }
+
+        const item = document.createElement("div");
+        item.className = `soul-chip-item ${statusClass}`;
+        item.innerHTML = `
+          <div class="soul-token-disc ${chip.discClass}">${chip.initials}</div>
+          <div class="soul-info">
+            <div class="soul-name">${chip.name}</div>
+            <div style="font-size:0.68rem;color:var(--text-muted);">${chip.wagerRound}</div>
+            <span class="soul-status-tag ${tagClass}">${chip.status}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById("reclaimedSoulsPill").textContent = `Souls Saved: ${recoveredCount}/2`;
+    }
+
+    function renderEvidenceNotesPanel() {
+      const container = document.getElementById("evidenceNotesContainer");
+      document.getElementById("notesCountBadge").textContent = evidenceNotes.length;
+
+      if (evidenceNotes.length === 0) {
+        container.innerHTML = `<div class="note-empty">No cheating evidence logged yet. Use Star Platinum if you spot suspicious dealing.</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      evidenceNotes.forEach(note => {
+        const div = document.createElement("div");
+        div.className = "note-entry";
+        div.innerHTML = `
+          <div class="note-entry-title">
+            <span>📌 ${note.title}</span>
+            <span style="font-size:0.65rem;color:#a7f3d0;">SAVED</span>
+          </div>
+          <div>${note.body}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderDarbyPortraitAndMeter() {
+      const psych = darbyAI.getPsychStateLabel();
+      const badge = document.getElementById("darbyPsychBadge");
+      badge.className = `psych-badge psych-${psych}`;
+      badge.textContent = `STATE: ${psych}`;
+
+      document.getElementById("darbyConfidencePct").textContent = `${darbyAI.confidence}%`;
+      document.getElementById("darbyConfidenceBar").style.width = `${darbyAI.confidence}%`;
+
+      // Update SVG facial expression dynamically
+      const mouth = document.getElementById("darbyMouthPath");
+      const sweat = document.getElementById("darbySweatGroup");
+
+      if (psych === "CALM") {
+        mouth.setAttribute("d", "M33 48 Q40 53 47 48"); // Smug grin
+        sweat.style.display = "none";
+      } else if (psych === "UNEASY") {
+        mouth.setAttribute("d", "M34 49 L46 49"); // Flat tense line
+        sweat.style.display = "block";
+      } else if (psych === "SHAKEN") {
+        mouth.setAttribute("d", "M33 51 Q40 46 47 51"); // Grimace
+        sweat.style.display = "block";
+      } else {
+        mouth.setAttribute("d", "M34 50 Q40 43 46 50"); // Panicked gasp
+        sweat.style.display = "block";
+      }
+    }
+
+    function updateInspectorPanel() {
+      document.getElementById("dsCurrentState").textContent = stateMachine.currentState;
+      document.getElementById("dsPrevState").textContent = stateMachine.previousState;
+      document.getElementById("dsAllowedTransitions").textContent =
+        stateMachine.getAllowedNextStates().join(", ") || "NONE";
+
+      document.getElementById("dsDeckLen").textContent = deck.length;
+      document.getElementById("dsDiscardLen").textContent = discardPile.length;
+      document.getElementById("dsJotaroHandLen").textContent = jotaroHand.length;
+      document.getElementById("dsDarbyHandLen").textContent = darbyHand.length;
+      document.getElementById("dsNotesLen").textContent = evidenceNotes.length;
+
+      document.getElementById("dsDealQueueSize").textContent = dealQueue.size();
+      const nextDeal = dealQueue.peek();
+      document.getElementById("dsDealQueuePeek").textContent =
+        nextDeal ? `${nextDeal.target}:${nextDeal.card.id}` : "EMPTY";
+      document.getElementById("dsDialogueQueueSize").textContent = dialogueQueue.size();
+
+      const pol = soulChipsMap.get("POLNAREFF");
+      const jos = soulChipsMap.get("JOSEPH");
+      document.getElementById("dsPolnareffState").textContent = pol ? pol.status : "N/A";
+      document.getElementById("dsJosephState").textContent = jos ? jos.status : "N/A";
+
+      let held = 0, saved = 0;
+      soulChipsMap.forEach(c => {
+        if (c.status === "RECOVERED") saved++;
+        else held++;
+      });
+      document.getElementById("dsSoulsSummary").textContent = `${held} Held / ${saved} Saved`;
+
+      document.getElementById("dsAiConfidence").textContent = darbyAI.confidence;
+      document.getElementById("dsAiDoubt").textContent = darbyAI.doubt;
+      document.getElementById("dsAiSuspicion").textContent = darbyAI.suspicion;
+      document.getElementById("dsAiCheatFlags").textContent =
+        `${darbyAI.cheatDetected} / ${darbyAI.cheatExposed}`;
+      document.getElementById("dsAiFinalFlags").textContent =
+        `${darbyAI.keptCardsHidden} / ${darbyAI.stuntSucceeded}`;
+
+      const liveBluff = darbyAI.calculateFinalBluffStrength(GameData.finalRaiseLevel || 3);
+      document.getElementById("dsAiBluffScore").textContent = `${liveBluff} / 65`;
+
+      const stackArr = eventHistoryStack.toArray();
+      document.getElementById("dsStackSize").textContent = `${stackArr.length} items`;
+      const stackContainer = document.getElementById("dsStackList");
+      stackContainer.innerHTML = "";
+      stackArr.slice(0, 14).forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "ds-stack-item";
+        div.textContent = entry;
+        stackContainer.appendChild(div);
+      });
+    }
+
+    function updateAllUI() {
+      document.getElementById("hudPhaseLabel").textContent = stateMachine.currentState;
+      document.getElementById("jotaroChipsDisplay").textContent = `Chips: ${GameData.jotaroChips.toLocaleString()}`;
+      document.getElementById("darbyChipsDisplay").textContent = `Chips: ${GameData.darbyChips.toLocaleString()}`;
+      document.getElementById("potAmountDisplay").textContent = `${GameData.pot.toLocaleString()} CHIPS`;
+      document.getElementById("currentBetDisplay").textContent = `${GameData.currentBetToCall.toLocaleString()} CHIPS`;
+
+      document.getElementById("jotaroCardsStatusPill").textContent =
+        `Cards: ${GameData.jotaroCardsFaceUp ? "Face Up" : "Hidden"}`;
+
+      // Dealer Boy vs D'Arby indicator
+      const dealerAvatar = document.getElementById("dealerAvatarIcon");
+      const dealerName = document.getElementById("activeDealerName");
+      const dealerSub = document.getElementById("activeDealerSub");
+      if (GameData.dealerIsBoy) {
+        dealerAvatar.textContent = "BOY";
+        dealerAvatar.style.borderColor = "var(--emerald)";
+        dealerName.textContent = "CURRENT DEALER: THE DEALER BOY (NEUTRAL)";
+        dealerSub.textContent = darbyAI.cheatExposed
+          ? "Replaced D'Arby after his bottom deal was publicly exposed."
+          : "Neutral dealer handling cards fairly from the top of the shoe.";
+      } else {
+        dealerAvatar.textContent = "D'A";
+        dealerAvatar.style.borderColor = "var(--gold)";
+        dealerName.textContent = "CURRENT DEALER: DANIEL J. D'ARBY";
+        dealerSub.textContent = "Dealing opening hand himself... Watch his fingers!";
+      }
+
+      document.getElementById("feltDeckCount").textContent = deck.length;
+      document.getElementById("feltDiscardCount").textContent = discardPile.length;
+      document.getElementById("visualDeckStack").textContent = deck.length;
+
+      // Star Platinum charge orbs
+      const orbsContainer = document.getElementById("standChargeOrbs");
+      orbsContainer.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const span = document.createElement("span");
+        span.className = `charge-orb ${i < GameData.starPlatinumCharges ? "filled" : ""}`;
+        orbsContainer.appendChild(span);
+      }
+      document.getElementById("btnStarPlatinum").disabled = GameData.starPlatinumCharges <= 0;
+
+      // Avdol button state
+      const avdolBtn = document.getElementById("btnAskAvdol");
+      avdolBtn.disabled = !GameData.avdolAvailableThisHand;
+      document.getElementById("avdolUsesLabel").textContent =
+        GameData.avdolAvailableThisHand ? "1/1 Ready" : "0/1 Used";
+
+      renderTableCards();
+      renderSoulChipsPanel();
+      renderEvidenceNotesPanel();
+      renderDarbyPortraitAndMeter();
+      updateInspectorPanel();
+    }
+
+    /* ==========================================================================
+       SECTION J: EVENT LISTENERS & KEYBOARD SHORTCUTS
+       ========================================================================== */
+
+    window.addEventListener("DOMContentLoaded", () => {
+      // Star Platinum Button
+      document.getElementById("btnStarPlatinum").addEventListener("click", () => {
+        handleStarPlatinumActivation();
+      });
+
+      // Ask Avdol Button
+      document.getElementById("btnAskAvdol").addEventListener("click", () => {
+        handleAskAvdol();
+      });
+
+      // QTE Call Out Cheat Button
+      document.getElementById("btnCallOutCheat").addEventListener("click", () => {
+        resolveCallOutQTE(true);
+      });
+
+      // Close Evidence Modal -> Immediately Launch QTE if in CHEATING_SEQUENCE
+      document.getElementById("btnCloseEvidenceModal").addEventListener("click", () => {
+        document.getElementById("evidenceModal").classList.remove("open");
+        if (stateMachine.currentState === "CHEATING_SEQUENCE") {
+          startCallOutQTE();
+        }
+      });
+
+      // Review Evidence Diagram Button
+      document.getElementById("btnReviewDiagram").addEventListener("click", () => {
+        document.getElementById("evidenceModal").classList.add("open");
+      });
+
+      // Toggle Evidence Notes Highlight
+      document.getElementById("btnToggleNotes").addEventListener("click", () => {
+        if (evidenceNotes.length > 0) {
+          document.getElementById("evidenceModal").classList.add("open");
+        } else {
+          const box = document.getElementById("evidenceNotesContainer");
+          box.style.outline = "2px solid var(--gold)";
+          setTimeout(() => (box.style.outline = "none"), 800);
+        }
+      });
+
+      // Toggle Data Structures Inspector
+      const inspectorDrawer = document.getElementById("dsInspectorDrawer");
+      const inspectorBtn = document.getElementById("btnToggleInspector");
+      function toggleInspector() {
+        inspectorDrawer.classList.toggle("open");
+        inspectorBtn.classList.toggle("active-toggle");
+        updateInspectorPanel();
+      }
+      inspectorBtn.addEventListener("click", toggleInspector);
+      document.getElementById("btnCloseInspector").addEventListener("click", toggleInspector);
+
+      // Toggle Audio SFX
+      const audioBtn = document.getElementById("btnToggleAudio");
+      audioBtn.addEventListener("click", () => {
+        SoundFX.enabled = !SoundFX.enabled;
+        audioBtn.textContent = SoundFX.enabled ? "🔊 SFX: ON" : "🔇 SFX: OFF";
+      });
+
+      // Rules Modal
+      document.getElementById("btnOpenRules").addEventListener("click", () => {
+        document.getElementById("rulesModal").classList.add("open");
+      });
+      document.getElementById("btnCloseRulesModal").addEventListener("click", () => {
+        document.getElementById("rulesModal").classList.remove("open");
+      });
+
+      // Restart Buttons
+      document.getElementById("btnRestartGame").addEventListener("click", () => resetFullGame());
+      document.getElementById("btnEndingRestart").addEventListener("click", () => resetFullGame());
+      document.getElementById("btnRetryFinalHand").addEventListener("click", () => restoreFinalShowdownCheckpoint());
+
+      // Keyboard Shortcuts ([SPACE] for Star Platinum, [E] for QTE, [A] for Avdol, [I] for Inspector)
+      window.addEventListener("keydown", e => {
+        if (e.code === "Space" && GameData.timingActive) {
+          e.preventDefault();
+          handleStarPlatinumActivation();
+        } else if ((e.key === "e" || e.key === "E") && GameData.qteActive) {
+          e.preventDefault();
+          resolveCallOutQTE(true);
+        } else if (e.key === "a" || e.key === "A") {
+          handleAskAvdol();
+        } else if (e.key === "i" || e.key === "I") {
+          toggleInspector();
+        }
+      });
+
+      // Initialize the game on load
+      resetFullGame();
+    });
+  </script>
+</body>
+</html>
