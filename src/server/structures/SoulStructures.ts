@@ -249,8 +249,8 @@ export class SoulVaultMap {
   }
 
   public getPlayerWagerableChips(): number {
-    return (['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'] as SoulOwner[]).reduce(
-      (total, owner) => total + this.get(owner).heldByPlayer,
+    return (['JOTARO', 'AVDOL', 'KAKYOIN'] as SoulOwner[]).reduce(
+      (total, owner) => total + this.get(owner).wagerableByPlayer,
       0
     );
   }
@@ -291,14 +291,20 @@ export class SoulVaultMap {
     }
 
     if (owner === 'HOLLY') {
-      const avdolInPotOrLost = this.get('AVDOL').inPot > 0 || this.get('AVDOL').heldByDarby > 0;
-      const kakyoinInPotOrLost = this.get('KAKYOIN').inPot > 0 || this.get('KAKYOIN').heldByDarby > 0;
-      const darbyBank = this.getDarbyTotalBank();
-      const allowed = avdolInPotOrLost || kakyoinInPotOrLost || darbyBank <= 6;
+      const avdol = this.get('AVDOL');
+      const kakyoin = this.get('KAKYOIN');
+      const allowed =
+        avdol.heldByPlayer === 0 &&
+        avdol.heldByDarby === avdol.totalChips &&
+        avdol.inPot === 0 &&
+        kakyoin.heldByPlayer === 0 &&
+        kakyoin.heldByDarby === kakyoin.totalChips &&
+        kakyoin.inPot === 0 &&
+        this.getPlayerWagerableChips() === 0;
       if (!allowed) {
         return {
           allowed: false,
-          reason: 'Ultimate Taboo: Holly Kujo\'s soul is locked until at least 1 other companion soul (Avdol/Kakyoin) is in the pot/lost, or D\'Arby has ≤6 chips remaining in reserve.'
+          reason: 'Last Resort: Holly Kujo\'s soul unlocks only after Jotaro, Avdol, and Kakyoin have lost all wagerable chips.'
         };
       }
       return { allowed: true };

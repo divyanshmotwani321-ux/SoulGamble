@@ -1,9 +1,9 @@
 export type DarbyFSMState = 'SMUG' | 'CALCULATING' | 'GREEDY' | 'SUSPICIOUS' | 'PARANOID' | 'CATATONIC';
 
 export interface DarbyMetrics {
-  rawBaseParanoia: number; // 0..100 (starts at 15, permanent changes only)
+  rawBaseParanoia: number; // 10..100 (starts at 10, permanent changes only)
   paranoia: number;        // 0..100 (effective current turn paranoia)
-  composure: number;       // 0..100 (100 - paranoia - penalty)
+  composure: number;       // 0..100 (always 100 - paranoia)
   suspicion: number;       // 0..100
   greed: number;           // 0..100
   threatImmunity: number;  // Increments by +15 per repetitive action, +30 on repeated blind play

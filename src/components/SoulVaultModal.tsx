@@ -14,8 +14,9 @@ interface Props {
   onClose: () => void;
   vaultEntries: SoulState[];
   jotaroActiveChips: number;
+  activeWagerableChips: number;
   toCall: number;
-  darbyBank: number;
+  mustPledge: boolean;
   onPledge: (owner: SoulOwner, amount: number) => void;
 }
 
@@ -24,8 +25,9 @@ export const SoulVaultModal: React.FC<Props> = ({
   onClose,
   vaultEntries,
   jotaroActiveChips,
+  activeWagerableChips,
   toCall,
-  darbyBank,
+  mustPledge,
   onPledge
 }) => {
   const [selectedOwner, setSelectedOwner] = useState<SoulOwner>('JOTARO');
@@ -36,10 +38,19 @@ export const SoulVaultModal: React.FC<Props> = ({
   const selectedSoul = vaultEntries.find(e => e.owner === selectedOwner);
   const maxAvailable = selectedSoul ? selectedSoul.heldByPlayer : 0;
 
-  const avdolInPotOrLost = (vaultEntries.find(e => e.owner === 'AVDOL')?.inPot || 0) > 0 ||
-    (vaultEntries.find(e => e.owner === 'AVDOL')?.heldByDarby || 0) > 0;
-  const kakyoinInPotOrLost = (vaultEntries.find(e => e.owner === 'KAKYOIN')?.inPot || 0) > 0 ||
-    (vaultEntries.find(e => e.owner === 'KAKYOIN')?.heldByDarby || 0) > 0;
+  const avdol = vaultEntries.find(e => e.owner === 'AVDOL');
+  const kakyoin = vaultEntries.find(e => e.owner === 'KAKYOIN');
+  const hollyUnlocked = Boolean(
+    avdol &&
+      kakyoin &&
+      avdol.heldByPlayer === 0 &&
+      avdol.heldByDarby === avdol.totalChips &&
+      avdol.inPot === 0 &&
+      kakyoin.heldByPlayer === 0 &&
+      kakyoin.heldByDarby === kakyoin.totalChips &&
+      kakyoin.inPot === 0 &&
+      activeWagerableChips === 0
+  );
 
   const checkGated = (owner: SoulOwner): { isGated: boolean; reason?: string } => {
     if (owner === 'JOTARO') return { isGated: false };
@@ -54,11 +65,10 @@ export const SoulVaultModal: React.FC<Props> = ({
       return { isGated: false };
     }
     if (owner === 'HOLLY') {
-      const allowed = avdolInPotOrLost || kakyoinInPotOrLost || darbyBank <= 6;
-      if (!allowed) {
+      if (!hollyUnlocked) {
         return {
           isGated: true,
-          reason: `Ultimate Taboo: Locked until Avdol or Kakyoin is risked/lost, or D'Arby has ≤6 chips in reserve (${darbyBank} left).`
+          reason: 'LAST RESORT — LOCKED (Only unlocks if Jotaro, Avdol & Kakyoin lose all chips)'
         };
       }
       return { isGated: false };
@@ -72,7 +82,7 @@ export const SoulVaultModal: React.FC<Props> = ({
   const handleConfirm = () => {
     if (canConfirm) {
       onPledge(selectedOwner, amount);
-      onClose();
+      if (!mustPledge) onClose();
     }
   };
 
@@ -87,18 +97,20 @@ export const SoulVaultModal: React.FC<Props> = ({
               Soul Vault • Collateral Pledge
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-300 transition"
-          >
-            <X size={18} />
-          </button>
+          {!mustPledge && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-300 transition"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Content */}
         <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto font-sans">
           <div className="text-xs text-slate-300 leading-relaxed bg-purple-950/30 p-3 rounded-xl border border-purple-900/40">
-            <strong>Liquidity Rules:</strong> You can only wager companion souls when your personal chips are depleted (≤2 chips) or when matching a large bet. Holly Kujo represents the ultimate taboo!
+            <strong>Last Resort:</strong> Holly stays locked until Jotaro, Avdol, and Kakyoin have lost every wagerable chip. Pledge companion souls when your personal chips are depleted or when matching a large bet.
           </div>
 
           {/* Soul Selector Cards */}
@@ -136,7 +148,15 @@ export const SoulVaultModal: React.FC<Props> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1 w-full mb-1">
                       <span className="font-bold text-xs text-amber-300 truncate">{soul.name}</span>
-                      {gating.isGated ? (
+                      {isHolly && hollyUnlocked ? (
+                        <span className="text-[9px] leading-tight font-mono font-bold px-1.5 py-1 rounded bg-rose-950/90 text-amber-200 border border-amber-400/70 animate-pulse text-center shrink-0">
+                          ⚠️ FINAL LIFELINE UNLOCKED — PLEDGE MOTHER&apos;S SOUL (+30% PARANOIA)
+                        </span>
+                      ) : isHolly ? (
+                        <span className="text-[9px] leading-tight font-mono font-bold px-1.5 py-1 rounded bg-rose-950/90 text-amber-200 border border-rose-500/70 text-center shrink-0">
+                          🔒 LAST RESORT — LOCKED (Only unlocks if Jotaro, Avdol &amp; Kakyoin lose all chips)
+                        </span>
+                      ) : gating.isGated ? (
                         <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-600/40 flex items-center gap-1 shrink-0">
                           <Lock size={10} /> GATED
                         </span>
@@ -175,6 +195,12 @@ export const SoulVaultModal: React.FC<Props> = ({
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-950/60 border border-rose-500/60 text-rose-200 text-xs font-mono">
                   <Lock size={16} className="text-rose-400 shrink-0 mt-0.5" />
                   <span>{selectedGating.reason}</span>
+                </div>
+              )}
+              {selectedOwner === 'HOLLY' && hollyUnlocked && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-950/70 border border-amber-400/70 text-amber-100 text-xs font-mono animate-pulse">
+                  <AlertTriangle size={16} className="text-amber-300 shrink-0 mt-0.5" />
+                  <span>⚠️ FINAL LIFELINE UNLOCKED — PLEDGE MOTHER&apos;S SOUL (+30% PARANOIA)</span>
                 </div>
               )}
 
@@ -228,9 +254,10 @@ export const SoulVaultModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition"
+            disabled={mustPledge}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            Cancel
+            {mustPledge ? 'Pledge Required' : 'Cancel'}
           </button>
           <button
             type="button"

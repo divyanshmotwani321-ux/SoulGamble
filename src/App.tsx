@@ -155,6 +155,28 @@ export const App: React.FC = () => {
     fetchState();
   }, []);
 
+  useEffect(() => {
+    if (!gameState || gameState.phase !== 'BETWEEN_HANDS') return;
+
+    const vaultEntries = gameState.dsTelemetry.soulVault.vaultEntries;
+    const activeOwners: SoulOwner[] = ['JOTARO', 'AVDOL', 'KAKYOIN'];
+    const activeWagerableChips = vaultEntries
+      .filter(entry => activeOwners.includes(entry.owner))
+      .reduce((total, entry) => total + entry.wagerableByPlayer, 0);
+    const hasPlayerPledge = gameState.dsTelemetry.soulPot.potChips.some(
+      chip => !chip.id.includes('DARBY')
+    );
+    const hasVaultReserve = (['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'] as const).some(
+      owner => (vaultEntries.find(entry => entry.owner === owner)?.heldByPlayer || 0) > 0
+    );
+
+    if (activeWagerableChips === 0 && !hasPlayerPledge && hasVaultReserve) {
+      setIsSoulVaultOpen(true);
+    } else if (activeWagerableChips === 0 && hasPlayerPledge) {
+      setIsSoulVaultOpen(false);
+    }
+  }, [gameState]);
+
   // Post action to server
   const sendAction = async (action: string, payload?: any) => {
     const prevState = gameState;
@@ -396,6 +418,12 @@ export const App: React.FC = () => {
   } = gameState;
 
   const jotaroChips = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOTARO')?.heldByPlayer || 0;
+  const activeWagerableChips = dsTelemetry.soulVault.vaultEntries
+    .filter(entry => (['JOTARO', 'AVDOL', 'KAKYOIN'] as SoulOwner[]).includes(entry.owner))
+    .reduce((total, entry) => total + entry.wagerableByPlayer, 0);
+  const mustPledgeSoul = phase === 'BETWEEN_HANDS' &&
+    activeWagerableChips === 0 &&
+    !dsTelemetry.soulPot.potChips.some(chip => !chip.id.includes('DARBY'));
   const potSize = dsTelemetry.soulPot.stackSize;
   const polnareffSafe = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'POLNAREFF')?.heldByPlayer || 0;
   const josephSafe = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOSEPH')?.heldByPlayer || 0;
@@ -405,14 +433,11 @@ export const App: React.FC = () => {
   const capturedChips = dsTelemetry.soulVault.vaultEntries
     .filter(entry => capturedOwners.includes(entry.owner) && entry.heldByDarby > 0)
     .map(entry => ({ owner: entry.owner, count: entry.heldByDarby }));
-  const wagerableOwners: SoulOwner[] = ['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'];
+  const wagerableOwners: SoulOwner[] = ['JOTARO', 'AVDOL', 'KAKYOIN'];
   const wagerableSoulEntries = dsTelemetry.soulVault.vaultEntries.filter(entry =>
     wagerableOwners.includes(entry.owner) && entry.wagerableByPlayer > 0
   );
-  const wagerableChipCount = wagerableSoulEntries.reduce(
-    (total, entry) => total + entry.wagerableByPlayer,
-    0
-  );
+  const wagerableChipCount = activeWagerableChips;
   const darbyBank = dsTelemetry.soulVault.vaultEntries.reduce(
     (total, entry) => total + entry.heldByDarby,
     0
@@ -1288,8 +1313,9 @@ export const App: React.FC = () => {
         onClose={() => setIsSoulVaultOpen(false)}
         vaultEntries={dsTelemetry.soulVault.vaultEntries}
         jotaroActiveChips={jotaroChips}
+        activeWagerableChips={activeWagerableChips}
         toCall={toCall}
-        darbyBank={darbyBank}
+        mustPledge={mustPledgeSoul}
         onPledge={(owner: SoulOwner, amount: number) =>
           sendAction('PLEDGE_SOUL', { owner, amount })
         }

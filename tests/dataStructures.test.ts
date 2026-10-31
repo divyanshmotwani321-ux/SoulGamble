@@ -137,6 +137,32 @@ assert(vault.canPledge('KAKYOIN', 0).allowed === true, 'Liquidity Gate unlocks K
 // Reset Jotaro chips
 vault.get('JOTARO').heldByPlayer = 6;
 
+const lastResortVault = new SoulVaultMap();
+assert(lastResortVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked at match start');
+lastResortVault.get('AVDOL').heldByPlayer = 0;
+lastResortVault.get('AVDOL').heldByDarby = 6;
+lastResortVault.get('KAKYOIN').heldByPlayer = 0;
+lastResortVault.get('KAKYOIN').heldByDarby = 6;
+assert(
+  lastResortVault.canPledge('HOLLY', 0).allowed === false,
+  'Holly remains locked while Jotaro has active wagerable chips'
+);
+lastResortVault.get('JOTARO').heldByPlayer = 0;
+lastResortVault.get('JOTARO').wagerableByPlayer = 0;
+lastResortVault.get('POLNAREFF').heldByPlayer = 6;
+lastResortVault.get('JOSEPH').heldByPlayer = 6;
+assert(
+  lastResortVault.getPlayerWagerableChips() === 0 &&
+    lastResortVault.canPledge('HOLLY', 0).allowed,
+  'Holly unlocks only after Jotaro, Avdol, and Kakyoin lose their chips; liberated souls do not count'
+);
+lastResortVault.get('KAKYOIN').heldByDarby = 5;
+lastResortVault.get('KAKYOIN').inPot = 1;
+assert(
+  lastResortVault.canPledge('HOLLY', 0).allowed === false,
+  'Holly stays locked while a Kakyoin chip is still in the pot'
+);
+
 // Test Buffs/Debuffs calculation
 vault.get('HOLLY').inPot = 1;
 const vaultTele = vault.toTelemetry();
@@ -280,15 +306,122 @@ assert(clientState.darbyHand.every(c => c.id.startsWith('HIDDEN_CARD_')), 'CRITI
 // 8. Dynamic Cheating & Voluntary Star Platinum Inspection Tests
 console.log('\n[8. Testing Probabilistic Cheating & Star Platinum Deductive Utility]');
 
+const mentalStateEngine = new GameEngine();
+assert(
+  mentalStateEngine.metrics.paranoia === 10 &&
+    mentalStateEngine.metrics.composure === 90 &&
+    mentalStateEngine.darbyFSM.getState() === 'SMUG',
+  'A new match starts at 10% paranoia, 90% composure, and SMUG'
+);
+mentalStateEngine.setBlindChoice(true);
+assert(
+  mentalStateEngine.metrics.paranoia + mentalStateEngine.metrics.composure === 100,
+  'Blind-hand modifiers preserve the inverse mental-state total'
+);
+mentalStateEngine.resetGame();
+assert(
+  mentalStateEngine.handNumber === 1 &&
+    !mentalStateEngine.isBlindHand &&
+    mentalStateEngine.metrics.paranoia === 10 &&
+    mentalStateEngine.metrics.composure === 90 &&
+    mentalStateEngine.darbyFSM.getState() === 'SMUG',
+  'Match reset restores the Hand 1 mental-state defaults'
+);
+
+const soulPledgeEngine = new GameEngine();
+soulPledgeEngine.phase = 'ACCUSATION_WINDOW';
+soulPledgeEngine.recentCheatType = 'BOTTOM_DEAL';
+soulPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 2;
+soulPledgeEngine.pocketIntel();
+
+let paranoiaBeforePledge = soulPledgeEngine.metrics.paranoia;
+soulPledgeEngine.pledgeSoul('AVDOL', 1);
+assert(
+  soulPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 12 &&
+    soulPledgeEngine.metrics.composure === 100 - soulPledgeEngine.metrics.paranoia,
+  'Avdol pledge increases paranoia by 12% after pocketing cheat intel'
+);
+
+paranoiaBeforePledge = soulPledgeEngine.metrics.paranoia;
+soulPledgeEngine.pledgeSoul('KAKYOIN', 1);
+assert(
+  soulPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 18 &&
+    soulPledgeEngine.metrics.composure === 100 - soulPledgeEngine.metrics.paranoia,
+  'Kakyoin pledge increases paranoia by 18% after pocketing cheat intel'
+);
+
+const hollyPledgeEngine = new GameEngine();
+hollyPledgeEngine.phase = 'PRE_DRAW_BETTING';
+hollyPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 0;
+hollyPledgeEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
+hollyPledgeEngine.soulVault.get('AVDOL').heldByPlayer = 0;
+hollyPledgeEngine.soulVault.get('AVDOL').heldByDarby = 6;
+hollyPledgeEngine.soulVault.get('KAKYOIN').heldByPlayer = 0;
+hollyPledgeEngine.soulVault.get('KAKYOIN').heldByDarby = 6;
+paranoiaBeforePledge = hollyPledgeEngine.metrics.paranoia;
+hollyPledgeEngine.pledgeSoul('HOLLY', 1);
+assert(
+  hollyPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 30 &&
+    hollyPledgeEngine.metrics.composure === 100 - hollyPledgeEngine.metrics.paranoia,
+  'Unlocked Holly pledge increases paranoia by 30% and preserves inverse composure'
+);
+
+const lifelineEngine = new GameEngine();
+lifelineEngine.soulVault.refundPot(lifelineEngine.soulPot);
+lifelineEngine.phase = 'BETWEEN_HANDS';
+lifelineEngine.soulVault.get('JOTARO').heldByPlayer = 0;
+lifelineEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
+lifelineEngine.soulVault.get('AVDOL').heldByPlayer = 0;
+lifelineEngine.soulVault.get('AVDOL').heldByDarby = 6;
+lifelineEngine.soulVault.get('KAKYOIN').heldByPlayer = 0;
+lifelineEngine.soulVault.get('KAKYOIN').heldByDarby = 6;
+lifelineEngine.checkVictoryConditions();
+assert(
+  lifelineEngine.phase === 'BETWEEN_HANDS',
+  'An empty active bank does not end the match while Holly remains in the vault'
+);
+lifelineEngine.nextHand();
+assert(lifelineEngine.handNumber === 1, 'A depleted player cannot skip the forced vault pledge');
+assert(lifelineEngine.pledgeSoul('HOLLY', 1) === 1, 'The last-resort Holly pledge is accepted between hands');
+lifelineEngine.nextHand();
+assert(
+  lifelineEngine.handNumber === 2 && lifelineEngine.phase === 'BLIND_SELECTION',
+  'Pledging a vault chip allows the next hand to begin'
+);
+
+const foldToVaultEngine = new GameEngine();
+foldToVaultEngine.phase = 'PRE_DRAW_BETTING';
+foldToVaultEngine.soulVault.get('JOTARO').heldByPlayer = 0;
+foldToVaultEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
+foldToVaultEngine.soulVault.get('AVDOL').heldByPlayer = 0;
+foldToVaultEngine.soulVault.get('AVDOL').heldByDarby = 6;
+foldToVaultEngine.soulVault.get('KAKYOIN').heldByPlayer = 0;
+foldToVaultEngine.soulVault.get('KAKYOIN').heldByDarby = 6;
+foldToVaultEngine.playerFold();
+assert(
+  foldToVaultEngine.phase === 'BETWEEN_HANDS',
+  'Losing the last active chips transitions to the vault instead of premature defeat'
+);
+
+const blindPledgeEngine = new GameEngine();
+blindPledgeEngine.setBlindChoice(true);
+blindPledgeEngine.phase = 'PRE_DRAW_BETTING';
+blindPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 2;
+paranoiaBeforePledge = blindPledgeEngine.metrics.paranoia;
+blindPledgeEngine.pledgeSoul('AVDOL', 1);
+assert(
+  blindPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 18 &&
+    blindPledgeEngine.metrics.composure === 100 - blindPledgeEngine.metrics.paranoia,
+  'Blind Avdol pledge applies the 1.5x paranoia boost'
+);
+
 // Test 8.1: Cheat Chance Calculations based on FSM & Metrics
 const testEngine = new GameEngine();
-testEngine.metrics.composure = 85;
-testEngine.metrics.paranoia = 15;
 testEngine.wasPreviouslyAccused = false;
+testEngine.syncComposureAndParanoia(5);
 assert(testEngine.calculateCheatChance() === 0.65, 'Cheat chance is 65% when Composure > 70 and Paranoia < 30');
 
-testEngine.metrics.composure = 60;
-testEngine.metrics.paranoia = 40;
+testEngine.syncComposureAndParanoia(25);
 assert(testEngine.calculateCheatChance() === 0.45, 'Base cheat chance is 45%');
 
 testEngine.wasPreviouslyAccused = true;
@@ -341,22 +474,30 @@ assert(fairInspectEngine.hasPocketedIntel === false, 'No pocketed intel on fair 
 const missInspectEngine = new GameEngine();
 missInspectEngine.starPlatinumCharges = 3;
 missInspectEngine.setBlindChoice(false);
-missInspectEngine.metrics.composure = 50;
+missInspectEngine.syncComposureAndParanoia(40);
 missInspectEngine.recentCheatType = 'BOTTOM_DEAL';
 missInspectEngine.spObserve(false);
 assert(missInspectEngine.starPlatinumCharges === 2, 'Missed SP observation consumes 1 charge');
 assert(missInspectEngine.metrics.composure === 65, 'Missed observation gives D\'Arby +15 Composure (Twitch Tell)');
+assert(
+  missInspectEngine.metrics.paranoia + missInspectEngine.metrics.composure === 100,
+  'Missed observation keeps paranoia and composure synchronized'
+);
 assert((missInspectEngine.phase as string) === 'PRE_DRAW_BETTING', 'Missed observation proceeds to PRE_DRAW_BETTING');
 
 // Test 8.6: Star Platinum Inspection: Twitch Tell (Triggering when D'Arby baits)
 const baitInspectEngine = new GameEngine();
 baitInspectEngine.starPlatinumCharges = 3;
-baitInspectEngine.metrics.composure = 50;
+baitInspectEngine.syncComposureAndParanoia(40);
 baitInspectEngine.phase = 'DEALING';
 baitInspectEngine.recentCheatType = 'NONE';
 baitInspectEngine.isBaiting = true;
 baitInspectEngine.spObserve(true);
 assert(baitInspectEngine.metrics.composure === 65, 'Bait trigger gives D\'Arby +15 Composure (Twitch Tell)');
+assert(
+  baitInspectEngine.metrics.paranoia + baitInspectEngine.metrics.composure === 100,
+  'Bait trigger keeps paranoia and composure synchronized'
+);
 assert(baitInspectEngine.dialogue.text.includes('Twitch Tell!'), 'Bait trigger produces Twitch Tell dialogue');
 
 // 9. 5-Card Draw Poker Street Progression & D'Arby Intelligent Discard

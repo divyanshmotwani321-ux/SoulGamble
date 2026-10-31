@@ -189,7 +189,7 @@ export class GameEngine {
   public discardedIndices: number[] = [];
 
   // Permanent vs Turn Paranoia:
-  // rawBaseParanoia starts at 10 and only changes through match events.
+  // rawBaseParanoia starts at 10 and changes only through the mental-state helper.
   public rawBaseParanoia: number = 10;
   public isNeutralDealerActive: boolean = false;
 
@@ -234,6 +234,9 @@ export class GameEngine {
     this.isNeutralDealerActive = false;
     this.dealer = 'DANIEL J. D\'ARBY';
     this.rawBaseParanoia = 10;
+    this.isBlindHand = false;
+    this.cardsLookedAt = false;
+    this.hasPocketedIntel = false;
     this.metrics = {
       rawBaseParanoia: 10,
       composure: 90,
@@ -258,27 +261,27 @@ export class GameEngine {
    * Couple Composure and Paranoia dynamically on an inverse scale (cannot exceed 100% combined).
    * Separates rawBaseParanoia from turn-effective Paranoia.
    */
-  public syncComposureAndParanoia(customAccusationPenalty?: number): void {
-    const penalty = customAccusationPenalty !== undefined
-      ? customAccusationPenalty
-      : (this.wasPreviouslyAccused ? 25 : 0);
+  public syncComposureAndParanoia(paranoiaDelta: number = 0): void {
+    if (paranoiaDelta !== 0) {
+      this.rawBaseParanoia = Math.min(100, Math.max(10, this.rawBaseParanoia + paranoiaDelta));
+    }
 
     const hollyInPot = this.soulVault.get('HOLLY').inPot > 0;
     const hollyMult = hollyInPot ? 1.6 : 1.0;
     const blindMult = this.isBlindHand ? 1.5 : 1.0;
     const stuntBonus = this.hasPhantomStunt ? 35 : 0;
     const intelBonus = this.hasPocketedIntel ? 20 : 0;
+    const accusationPenalty = this.wasPreviouslyAccused ? 25 : 0;
     const immunity = this.metrics.threatImmunity;
 
-    // Calculate effective paranoia for current turn without recursively overwriting rawBaseParanoia
-    const effectiveParanoia = Math.min(
-      100,
-      Math.max(10, Math.round(this.rawBaseParanoia * hollyMult * blindMult + stuntBonus + intelBonus - immunity))
-    );
+    const effectiveParanoia = Math.min(100, Math.max(
+      10,
+      Math.round(this.rawBaseParanoia * hollyMult * blindMult + stuntBonus + intelBonus + accusationPenalty - immunity)
+    ));
 
     this.metrics.rawBaseParanoia = this.rawBaseParanoia;
     this.metrics.paranoia = effectiveParanoia;
-    this.metrics.composure = Math.max(0, 100 - effectiveParanoia - penalty);
+    this.metrics.composure = 100 - effectiveParanoia;
 
     // Sync FSM
     this.darbyFSM.evaluateFSM(this.metrics);
@@ -300,6 +303,23 @@ export class GameEngine {
     }
   }
 
+  private adjustDarbyParanoia(deltaParanoia: number): void {
+    const targetParanoia = Math.min(100, Math.max(10, Math.round(this.metrics.paranoia + deltaParanoia)));
+    const hollyMult = this.soulVault.get('HOLLY').inPot > 0 ? 1.6 : 1.0;
+    const blindMult = this.isBlindHand ? 1.5 : 1.0;
+    const additiveModifiers =
+      (this.hasPhantomStunt ? 35 : 0) +
+      (this.hasPocketedIntel ? 20 : 0) +
+      (this.wasPreviouslyAccused ? 25 : 0) -
+      this.metrics.threatImmunity;
+
+    this.rawBaseParanoia = Math.min(
+      100,
+      Math.max(10, (targetParanoia - additiveModifiers) / (hollyMult * blindMult))
+    );
+    this.syncComposureAndParanoia();
+  }
+
   public drawSafeCard(): Card {
     try {
       if (this.deck.size > 0) {
@@ -315,6 +335,8 @@ export class GameEngine {
   public initHand(): void {
     this.dealer = this.isNeutralDealerActive ? 'DEALER BOY' : 'DANIEL J. D\'ARBY';
     this.deck.reset(this.dealer === 'DANIEL J. D\'ARBY');
+    this.isBlindHand = false;
+    this.cardsLookedAt = false;
     this.authoritativeJotaroHand = [];
     this.authoritativeDarbyHand = [];
     this.discardedIndices = [];
@@ -326,6 +348,7 @@ export class GameEngine {
     this.hasTamperedThisHand = false;
     this.hasBluffedThisHand = false;
     this.isDarbyBluffing = false;
+    this.hasPocketedIntel = false;
     this.showdownResult = null;
     this.actionReport = null;
     this.currentStreet = 'PRE_DRAW';
@@ -377,13 +400,14 @@ export class GameEngine {
       const blindRepetition = this.patternQueue.countRecentAction('BLIND_LOCK', 3);
       if (blindRepetition >= 2) {
         this.metrics.threatImmunity += 30;
+        this.syncComposureAndParanoia();
         this.dialogue = {
           speaker: 'DANIEL J. D\'ARBY',
           text: '"Playing blind again, Jotaro? Lightning doesn\'t strike twice. I\'ll call your blind gambit every time!"',
           portraitMood: 'CONFIDENT'
         };
       } else {
-        this.rawBaseParanoia += 15;
+        this.syncComposureAndParanoia(15);
         this.dialogue = {
           speaker: 'JOTARO KUJO',
           text: '"I won\'t even look at my hand. A gambler who relies on peeking at his cards already lacks conviction."',
@@ -514,7 +538,7 @@ export class GameEngine {
         };
       } else if (this.isBaiting) {
         const penalty = this.patternQueue.enqueue('SP_OBSERVE_MISS');
-        this.rawBaseParanoia = Math.max(10, 100 - (this.metrics.composure + 15));
+        this.syncComposureAndParanoia(-15);
         this.metrics.threatImmunity += penalty.penalty;
         this.phase = 'PRE_DRAW_BETTING';
         this.dialogue = {
@@ -543,7 +567,7 @@ export class GameEngine {
       }
     } else {
       const penalty = this.patternQueue.enqueue('SP_OBSERVE_MISS');
-      this.rawBaseParanoia = Math.max(10, 100 - (this.metrics.composure + 15));
+      this.syncComposureAndParanoia(-15);
       this.metrics.threatImmunity += penalty.penalty;
       this.phase = 'PRE_DRAW_BETTING';
       this.dialogue = {
@@ -580,7 +604,7 @@ export class GameEngine {
 
     this.wasPreviouslyAccused = true;
     this.patternQueue.enqueue('PUBLIC_ACCUSE');
-    this.rawBaseParanoia += 20;
+    this.syncComposureAndParanoia(20);
     this.metrics.cheatExposed = true;
     this.isNeutralDealerActive = true;
     this.dealer = 'DEALER BOY';
@@ -628,7 +652,7 @@ export class GameEngine {
 
     if (validIndices.length === 0 && this.isBlindHand) {
       this.intelDAG.activateNode('ZERO_CARDS_DISCARDED');
-      this.rawBaseParanoia += 20;
+      this.syncComposureAndParanoia(20);
     }
 
     // Replace Jotaro's discarded cards
@@ -726,7 +750,7 @@ export class GameEngine {
       this.hasTamperedThisHand = true;
       this.starPlatinumCharges--;
       this.patternQueue.enqueue('DECK_TAMPER');
-      this.rawBaseParanoia += 25;
+      this.syncComposureAndParanoia(25);
       this.syncComposureAndParanoia();
       // D'Arby notices something is wrong (in character)
       this.dialogue = {
@@ -757,7 +781,7 @@ export class GameEngine {
     this.starPlatinumCharges--;
     this.hasPhantomStunt = true;
     this.metrics.stuntSucceeded = true;
-    this.rawBaseParanoia += 35;
+    this.syncComposureAndParanoia(35);
     this.syncComposureAndParanoia();
     this.intelDAG.activateNode('SP_PHANTOM_STUNT');
     this.patternQueue.enqueue('PHANTOM_STUNT');
@@ -787,8 +811,12 @@ export class GameEngine {
       this.phase !== 'PRE_DRAW_BETTING' &&
       this.phase !== 'POST_DRAW_BETTING' &&
       this.phase !== 'BETTING_ROUND' &&
-      this.phase !== 'BLIND_SELECTION'
+      this.phase !== 'BLIND_SELECTION' &&
+      this.phase !== 'BETWEEN_HANDS'
     ) {
+      return 0;
+    }
+    if (this.phase === 'BETWEEN_HANDS' && this.soulVault.getPlayerWagerableChips() > 0) {
       return 0;
     }
 
@@ -809,8 +837,20 @@ export class GameEngine {
     this.patternQueue.enqueue('PLEDGE_SOUL');
     this.jotaroStreetBet += pledged;
 
-    // Earned Paranoia vs. Reckless Desperation Check:
-    // Pledging Kakyoin or Holly ONLY inflicts Paranoia if at least TWO of:
+    const pledgeParanoiaBoost = owner === 'AVDOL'
+      ? 12
+      : owner === 'KAKYOIN'
+        ? 18
+        : owner === 'HOLLY'
+          ? 30
+          : 0;
+    if (pledgeParanoiaBoost > 0) {
+      this.adjustDarbyParanoia(pledgeParanoiaBoost * (this.isBlindHand ? 1.5 : 1));
+    }
+
+    // Earned resolve changes the reaction and intel bonuses, but every companion pledge
+    // has already applied its paranoia increase above.
+    // The heightened reaction requires at least TWO of:
     // a) Hand is LOCKED_BLIND with 0 cards discarded.
     // b) Caught cheat (hasPocketedIntel || recentCheatType !== 'NONE').
     // c) Executed SP_PHANTOM_STUNT on this hand.
@@ -824,14 +864,12 @@ export class GameEngine {
         // Earned Paranoia!
         if (owner === 'HOLLY') {
           this.intelDAG.activateNode('PLEDGED_TABOO_SOUL');
-          this.rawBaseParanoia += 30;
           this.dialogue = {
             speaker: 'DANIEL J. D\'ARBY',
             text: '"Y-YOUR OWN MOTHER\'S SOUL?! Backed by cold, calculated silence... Are you truly that confident in your cards, Jotaro?!"',
             portraitMood: 'PANICKED'
           };
         } else {
-          this.rawBaseParanoia += 20;
           this.dialogue = {
             speaker: 'DANIEL J. D\'ARBY',
             text: '"Noriaki Kakyoin\'s soul... you wager your companions with terrifying coldness."',
@@ -841,8 +879,6 @@ export class GameEngine {
       } else {
         // Reckless Desperation: Trigger PREDATORY GREED!
         this.metrics.greed = Math.min(100, this.metrics.greed + 30);
-        this.metrics.composure = Math.min(100, this.metrics.composure + 20);
-        this.rawBaseParanoia = Math.max(10, this.rawBaseParanoia - 15);
         this.darbyFSM.forceTransition('GREEDY', 'Predatory Greed: Unearned desperation pledge');
         this.dialogue = {
           speaker: 'DANIEL J. D\'ARBY',
@@ -905,7 +941,7 @@ export class GameEngine {
       this.discardedIndices.length >= 2 &&
       pledged >= 2
     ) {
-      this.metrics.composure = Math.min(100, this.metrics.composure + 20);
+      this.syncComposureAndParanoia(-20);
       const diff = this.jotaroStreetBet - this.darbyStreetBet;
       const matched = this.soulVault.darbyMatchCall(diff, this.soulPot, this.phase);
       this.darbyStreetBet += matched;
@@ -965,8 +1001,7 @@ export class GameEngine {
 
     // Backfire Risk: drew 2-3 cards against composed D'Arby in POST_DRAW_BETTING
     if (drewManyCards && isSmugCalculating && this.currentStreet === 'POST_DRAW') {
-      this.rawBaseParanoia = Math.max(10, this.rawBaseParanoia - 10);
-      this.metrics.composure = Math.min(100, this.metrics.composure + 15);
+      this.syncComposureAndParanoia(-10);
 
       const diff = Math.max(0, this.jotaroStreetBet - this.darbyStreetBet);
       const matched = this.soulVault.darbyMatchCall(diff, this.soulPot, this.phase);
@@ -994,7 +1029,7 @@ export class GameEngine {
     const bluffSucceeded = Math.random() < successProb;
 
     if (bluffSucceeded) {
-      this.rawBaseParanoia += 18;
+      this.syncComposureAndParanoia(18);
       this.syncComposureAndParanoia();
 
       const dEval = PokerHandEvaluator.evaluate(this.authoritativeDarbyHand);
@@ -1176,16 +1211,6 @@ export class GameEngine {
       return;
     }
 
-    if (this.soulVault.getPlayerWagerableChips() <= 0) {
-      this.phase = 'DEFEAT';
-      this.dialogue = {
-        speaker: 'DANIEL J. D\'ARBY',
-        text: '"You have no wagerable chips left, and no allies remain to pledge. DEFEAT!"',
-        portraitMood: 'CONFIDENT'
-      };
-      return;
-    }
-
     this.dialogue = {
       speaker: 'DANIEL J. D\'ARBY',
       text: '"Heh, a prudent surrender. But your stack dwindles while mine grows!"',
@@ -1237,13 +1262,15 @@ export class GameEngine {
     const failureDialogue =
       "Heh... Heh heh heh. You think a hollow bluff can shake my loyalty to Lord DIO? You're playing with fire, Jotaro. Show me your hand!";
 
+    this.syncComposureAndParanoia(succeeded ? 100 - this.rawBaseParanoia : -10);
+
     const evaluation: DioDemandEvaluation = {
       outcomeNumber: succeeded ? 3 : 2,
       outcomeName: succeeded ? 'MENTAL_COLLAPSE' : 'RESISTED',
       dialogue: succeeded ? successDialogue : failureDialogue,
       potDeficit,
-      effectiveParanoia,
-      effectiveComposure: succeeded ? 0 : Math.min(100, this.metrics.composure + 10),
+      effectiveParanoia: this.metrics.paranoia,
+      effectiveComposure: this.metrics.composure,
       isBlindHand: this.isBlindHand,
       decisionPath: [
         `Success roll: ${effectiveParanoia}% paranoia`,
@@ -1252,10 +1279,6 @@ export class GameEngine {
     };
 
     if (succeeded) {
-      this.metrics.composure = 0;
-      this.rawBaseParanoia = 100;
-      this.metrics.paranoia = 100;
-      this.metrics.rawBaseParanoia = 100;
       this.darbyFSM.forceTransition('CATATONIC', 'Mental Collapse: Demanded DIO\'s secret blind');
       this.phase = 'VICTORY';
       this.soulVault.awardPot('PLAYER', this.soulPot);
@@ -1270,14 +1293,12 @@ export class GameEngine {
       };
       this.actionFeed.unshift('★ D\'ARBY SUFFERS MENTAL COLLAPSE! JOTARO WINS!');
     } else {
-      this.metrics.composure = evaluation.effectiveComposure;
       this.dialogue = {
         speaker: 'DANIEL J. D\'ARBY',
         text: `"${failureDialogue}"`,
         portraitMood: 'CONFIDENT'
       };
-      this.darbyFSM.evaluateFSM(this.metrics);
-      this.actionFeed.unshift('D\'Arby resisted the DIO demand and laughed it off (+10% composure).');
+      this.actionFeed.unshift('D\'Arby resisted the DIO demand and regained composure.');
     }
 
     return evaluation;
@@ -1371,20 +1392,38 @@ export class GameEngine {
     }
 
     if (this.soulVault.getPlayerWagerableChips() <= 0) {
+      const collateralRemaining = (['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'] as const)
+        .some(owner => this.soulVault.get(owner).heldByPlayer > 0);
+      if (collateralRemaining) {
+        this.phase = 'BETWEEN_HANDS';
+        this.dialogue = {
+          speaker: 'DANIEL J. D\'ARBY',
+          text: '"Your active chips are gone... but the Soul Vault still holds one final wager. Choose your collateral before the next hand."',
+          portraitMood: 'SWEATING'
+        };
+        return;
+      }
+
       this.phase = 'DEFEAT';
       this.dialogue = {
         speaker: 'DANIEL J. D\'ARBY',
-        text: '"You have no wagerable chips left, and no allies remain to pledge. DEFEAT!"',
+        text: '"You have no wagerable chips left, and no souls remain in the vault. DEFEAT!"',
         portraitMood: 'CONFIDENT'
       };
     }
   }
 
   public nextHand(): void {
-    if (this.phase === 'VICTORY' || this.phase === 'DEFEAT') return;
+    if (this.phase !== 'BETWEEN_HANDS' && this.phase !== 'SHOWDOWN') return;
+    if (this.phase === 'BETWEEN_HANDS' && this.soulVault.getPlayerWagerableChips() <= 0) {
+      const hasPlayerPledge = this.soulPot.toTelemetry().potChips.some(
+        chip => !chip.id.includes('DARBY')
+      );
+      if (!hasPlayerPledge) return;
+    }
     this.handNumber++;
     // Permanent between-hand paranoia decay (-10)
-    this.rawBaseParanoia = Math.max(10, this.rawBaseParanoia - 10);
+    this.syncComposureAndParanoia(-10);
     this.initHand();
   }
 
