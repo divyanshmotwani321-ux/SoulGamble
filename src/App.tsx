@@ -401,6 +401,10 @@ export const App: React.FC = () => {
   const josephSafe = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOSEPH')?.heldByPlayer || 0;
   const polnareffHeldByDarby = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'POLNAREFF')?.heldByDarby || 0;
   const josephHeldByDarby = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOSEPH')?.heldByDarby || 0;
+  const capturedOwners: SoulOwner[] = ['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'];
+  const capturedChips = dsTelemetry.soulVault.vaultEntries
+    .filter(entry => capturedOwners.includes(entry.owner) && entry.heldByDarby > 0)
+    .map(entry => ({ owner: entry.owner, count: entry.heldByDarby }));
   const wagerableOwners: SoulOwner[] = ['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'];
   const wagerableSoulEntries = dsTelemetry.soulVault.vaultEntries.filter(entry =>
     wagerableOwners.includes(entry.owner) && entry.wagerableByPlayer > 0
@@ -409,7 +413,10 @@ export const App: React.FC = () => {
     (total, entry) => total + entry.wagerableByPlayer,
     0
   );
-  const darbyBank = polnareffHeldByDarby + josephHeldByDarby;
+  const darbyBank = dsTelemetry.soulVault.vaultEntries.reduce(
+    (total, entry) => total + entry.heldByDarby,
+    0
+  );
   const toCall = gameState.toCall || 0;
 
   // Dealing phase indicator
@@ -583,6 +590,7 @@ export const App: React.FC = () => {
                 streetBet={gameState.darbyStreetBet || 0}
                 polnareffChips={polnareffHeldByDarby}
                 josephChips={josephHeldByDarby}
+                capturedChips={capturedChips}
                 isBluffing={gameState.isDarbyBluffing}
               />
             </div>

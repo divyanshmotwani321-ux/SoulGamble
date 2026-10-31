@@ -824,6 +824,13 @@
   height: clamp(16px, 2vh, 20px);
 }
 
+.darby-hud .soul-chip-jotaro {
+  width: clamp(16px, 2vh, 20px);
+  height: clamp(16px, 2vh, 20px);
+  font-size: 7px;
+  outline-width: 2px;
+}
+
 .perspective-stage,
 .table-area {
   height: 100%;

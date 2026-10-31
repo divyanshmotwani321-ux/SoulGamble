@@ -1,5 +1,6 @@
 import React from 'react';
 import { DarbyFSMState } from '../server/structures/DarbyBrain.js';
+import { SoulOwner } from '../server/structures/SoulStructures.js';
 import { Skull, AlertTriangle, Shield, Coins } from 'lucide-react';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   streetBet: number;
   polnareffChips: number;
   josephChips: number;
+  capturedChips: Array<{ owner: SoulOwner; count: number }>;
   isBluffing?: boolean;
 }
 
@@ -21,10 +23,12 @@ export const DarbyArcadeHUD: React.FC<Props> = ({
   streetBet,
   polnareffChips,
   josephChips,
+  capturedChips,
   isBluffing = false
 }) => {
   const isHighDanger = paranoia >= 70 || composure <= 30;
   const isCatatonic = fsmState === 'CATATONIC' || composure <= 0;
+  const capturedChipCount = capturedChips.reduce((total, chipGroup) => total + chipGroup.count, 0);
 
   const getFsmColor = (state: DarbyFSMState) => {
     switch (state) {
@@ -169,6 +173,39 @@ export const DarbyArcadeHUD: React.FC<Props> = ({
             </span>
           </div>
         </div>
+        {capturedChipCount > 0 && (
+          <div className="mt-2 border-t border-purple-900/60 pt-1.5">
+            <div className="font-arcade text-[7px] text-amber-300 tracking-wider mb-1">
+              CAPTURED JOTARO / CRUSADER CHIPS ×{capturedChipCount}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {capturedChips.map(({ owner, count }) => (
+                <div
+                  key={owner}
+                  className="flex items-center gap-1.5"
+                  aria-label={`${owner} captured chips: ${count}`}
+                  title={`${owner} captured chips`}
+                >
+                  <div className="flex -space-x-2">
+                    {Array.from({ length: count }).map((_, i) => (
+                      <div
+                        key={`${owner}-${i}`}
+                        className={`soul-chip-jotaro soul-chip-${owner.toLowerCase()}`}
+                        style={{ zIndex: i }}
+                        aria-hidden="true"
+                      >
+                        ★
+                      </div>
+                    ))}
+                  </div>
+                  <span className="font-arcade text-[7px] text-amber-200">
+                    ×{count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

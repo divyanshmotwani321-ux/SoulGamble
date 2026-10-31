@@ -67,6 +67,55 @@ assert(pot.isEmpty(), 'SoulPotStack is empty after refund');
 assert(vault.get('JOTARO').heldByPlayer === 6, 'LIFO refund restored Jotaro chips to exact owner');
 assert(vault.get('POLNAREFF').heldByDarby === 6, 'LIFO refund restored D\'Arby chips to exact owner');
 
+// D'Arby keeps every lost player chip and wagers captured chips before his original souls.
+vault.pledgeToPot('JOTARO', 2, pot, 'TEST_LOSS', true);
+vault.pledgeToPot('AVDOL', 1, pot, 'TEST_LOSS', true);
+vault.awardPot('DARBY', pot);
+assert(vault.getDarbyTotalBank() === 15, 'D\'Arby bank grows beyond 12 when he captures player chips');
+assert(vault.get('JOTARO').heldByDarby === 2, 'D\'Arby bank tracks captured Jotaro chips');
+assert(vault.get('AVDOL').heldByDarby === 1, 'D\'Arby bank tracks captured companion chips');
+
+const fullTransferVault = new SoulVaultMap();
+const fullTransferPot = new SoulPotStack();
+fullTransferVault.pledgeToPot('JOTARO', 2, fullTransferPot, 'TEST_LOSS', true);
+fullTransferVault.darbyMatchCall(2, fullTransferPot, 'TEST_LOSS');
+fullTransferVault.awardPot('DARBY', fullTransferPot);
+assert(fullTransferVault.getDarbyTotalBank() === 14, 'D\'Arby receives every chip in the pot, including his own bets');
+assert(fullTransferVault.get('POLNAREFF').heldByDarby === 6, 'D\'Arby\'s own Polnareff chips remain in his bank after winning');
+
+const foldEngine = new GameEngine();
+foldEngine.phase = 'PRE_DRAW_BETTING';
+foldEngine.playerFold();
+assert(foldEngine.soulVault.get('JOTARO').heldByDarby === 1, 'Jotaro-folded chips transfer to D\'Arby');
+assert(foldEngine.soulVault.getDarbyTotalBank() === 13, 'D\'Arby bank total updates after Jotaro folds');
+
+const capturedChipsPot = new SoulPotStack();
+const capturedChipsMatched = vault.darbyMatchCall(3, capturedChipsPot, 'TEST_REBET');
+const capturedBetOwners = capturedChipsPot.toTelemetry().potChips.map(chip => chip.owner);
+assert(capturedChipsMatched === 3, 'D\'Arby can wager captured chips from his bank');
+assert(
+  capturedBetOwners.join(',') === 'JOTARO,JOTARO,AVDOL',
+  'D\'Arby spends captured chips first in LIFO order'
+);
+vault.awardPot('PLAYER', capturedChipsPot);
+assert(vault.get('JOTARO').heldByPlayer === 6, 'Jotaro can win captured Jotaro chips back');
+assert(vault.get('JOTARO').wagerableByPlayer === 6, 'Won Jotaro chips return to the active wagerable bank');
+assert(vault.get('AVDOL').heldByPlayer === 6, 'Jotaro can win captured companion chips back');
+assert(vault.get('AVDOL').wagerableByPlayer === 1, 'Won Avdol chips return to the active wagerable bank');
+
+const liberatedVault = new SoulVaultMap();
+const liberatedPot = new SoulPotStack();
+liberatedVault.darbyMatchCall(1, liberatedPot, 'TEST_LIBERATION');
+liberatedVault.awardPot('PLAYER', liberatedPot);
+assert(liberatedVault.get('POLNAREFF').heldByPlayer === 1, 'Polnareff chips won by Jotaro enter liberated souls');
+assert(liberatedVault.get('POLNAREFF').wagerableByPlayer === 0, 'Liberated Polnareff chips remain protected from betting');
+
+const victoryEngine = new GameEngine();
+victoryEngine.soulVault.clearDarbyBank('POLNAREFF');
+victoryEngine.soulVault.clearDarbyBank('JOSEPH');
+victoryEngine.checkVictoryConditions();
+assert(victoryEngine.phase === 'VICTORY', 'Jotaro wins when D\'Arby\'s entire bank reaches zero');
+
 // Test True Pot Deficit calculation:
 // If player contributes 3 chips and D'Arby has 12 chips in reserve, deficit is negative (3 - 12 = -9)
 vault.pledgeToPot('JOTARO', 3, pot, 'BET', true);

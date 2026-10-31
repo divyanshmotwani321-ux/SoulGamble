@@ -336,9 +336,9 @@ export class GameEngine {
     // Reset action ticker feed
     this.actionFeed = ['Hand initialized: 1 Ante chip posted by each player.'];
 
-    // Post 1 Ante chip from Jotaro and 1 chip from D'Arby (Polnareff reserve)
+    // Post 1 Ante chip from Jotaro and 1 D'Arby chip using captured-chip priority.
     this.soulVault.pledgeToPot('JOTARO', 1, this.soulPot, 'ANTE', true);
-    this.soulVault.darbyMatchPot('POLNAREFF', 1, this.soulPot, 'ANTE');
+    this.soulVault.darbyMatchCall(1, this.soulPot, 'ANTE');
 
     this.phase = 'BLIND_SELECTION';
     this.dialogue = {
@@ -1259,10 +1259,10 @@ export class GameEngine {
       this.darbyFSM.forceTransition('CATATONIC', 'Mental Collapse: Demanded DIO\'s secret blind');
       this.phase = 'VICTORY';
       this.soulVault.awardPot('PLAYER', this.soulPot);
+      this.soulVault.clearDarbyBank('POLNAREFF');
       this.soulVault.get('POLNAREFF').heldByPlayer = 6;
-      this.soulVault.get('POLNAREFF').heldByDarby = 0;
+      this.soulVault.clearDarbyBank('JOSEPH');
       this.soulVault.get('JOSEPH').heldByPlayer = 6;
-      this.soulVault.get('JOSEPH').heldByDarby = 0;
       this.dialogue = {
         speaker: 'DANIEL J. D\'ARBY',
         text: `"${successDialogue}"`,
@@ -1358,6 +1358,7 @@ export class GameEngine {
 
     if (
       (polnareff.heldByPlayer === 6 && joseph.heldByPlayer === 6) ||
+      this.soulVault.getDarbyTotalBank() === 0 ||
       this.darbyFSM.getState() === 'CATATONIC'
     ) {
       this.phase = 'VICTORY';

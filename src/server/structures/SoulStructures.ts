@@ -126,6 +126,8 @@ export class SoulPotStack {
  */
 export class SoulVaultMap {
   private buckets: Map<SoulOwner, SoulState> = new Map();
+  public darbyBankChips: SoulChip[] = [];
+  private darbyBetCounter: number = 0;
 
   constructor() {
     this.initVault();
@@ -133,6 +135,8 @@ export class SoulVaultMap {
 
   public initVault(): void {
     this.buckets.clear();
+    this.darbyBankChips = [];
+    this.darbyBetCounter = 0;
 
     // 1. JOTARO (Player starting stack: 6 chips)
     this.buckets.set('JOTARO', {
@@ -217,6 +221,17 @@ export class SoulVaultMap {
       buffDescription: 'Taboo Multiplier: 1.6x Paranoia inflicted on D\'Arby.',
       penaltyDescription: 'Sudden Death: Losing even 1 chip = INSTANT GAME OVER.'
     });
+
+    for (const owner of ['POLNAREFF', 'JOSEPH'] as const) {
+      for (let i = 1; i <= 6; i++) {
+        this.darbyBankChips.push({
+          id: `${owner}_DARBY_CHIP_${i}`,
+          owner,
+          betOrder: 0,
+          pledgedAtPhase: 'BANK'
+        });
+      }
+    }
   }
 
   public get(owner: SoulOwner): SoulState {
@@ -226,11 +241,7 @@ export class SoulVaultMap {
   }
 
   public getDarbyTotalBank(): number {
-    let total = 0;
-    for (const s of this.buckets.values()) {
-      total += s.heldByDarby;
-    }
-    return total;
+    return this.darbyBankChips.length;
   }
 
   public getPlayerActiveChips(): number {
@@ -328,41 +339,63 @@ export class SoulVaultMap {
 
   public darbyMatchPot(owner: SoulOwner, amount: number, pot: SoulPotStack, phase: string): number {
     const s = this.get(owner);
-    const available = s.heldByDarby;
+    const available = this.darbyBankChips.filter(chip => chip.owner === owner).length;
     const toMatch = Math.min(amount, available);
 
     for (let i = 0; i < toMatch; i++) {
-      s.heldByDarby--;
-      s.inPot++;
-      pot.push({
-        id: `${owner}_DARBY_CHIP_${6 - s.heldByDarby}`,
-        owner,
-        pledgedAtPhase: phase
-      });
+      const bankIndex = this.findLastDarbyChipIndex([owner]);
+      if (bankIndex < 0) break;
+      this.moveDarbyChipToPot(bankIndex, pot, phase);
     }
 
     return toMatch;
   }
 
   /**
-   * 1-for-1 matching for D'Arby: matches amountNeeded using Polnareff chips first, then Joseph chips,
-   * and any captured companion chips.
+   * 1-for-1 matching for D'Arby: use captured player chips first, then Polnareff, then Joseph.
    */
   public darbyMatchCall(amountNeeded: number, pot: SoulPotStack, phase: string): number {
     let matched = 0;
-    const priority: SoulOwner[] = ['POLNAREFF', 'JOSEPH', 'AVDOL', 'KAKYOIN', 'JOTARO'];
+    const priority: SoulOwner[][] = [
+      ['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'],
+      ['POLNAREFF'],
+      ['JOSEPH']
+    ];
 
-    for (const owner of priority) {
+    for (const owners of priority) {
       if (matched >= amountNeeded) break;
-      const needed = amountNeeded - matched;
-      const s = this.get(owner);
-      if (s.heldByDarby > 0) {
-        const toTake = Math.min(needed, s.heldByDarby);
-        matched += this.darbyMatchPot(owner, toTake, pot, phase);
+      while (matched < amountNeeded) {
+        const bankIndex = this.findLastDarbyChipIndex(owners);
+        if (bankIndex < 0) break;
+        this.moveDarbyChipToPot(bankIndex, pot, phase);
+        matched++;
       }
     }
 
     return matched;
+  }
+
+  private findLastDarbyChipIndex(owners: readonly SoulOwner[]): number {
+    for (let i = this.darbyBankChips.length - 1; i >= 0; i--) {
+      if (owners.includes(this.darbyBankChips[i].owner)) return i;
+    }
+    return -1;
+  }
+
+  private moveDarbyChipToPot(bankIndex: number, pot: SoulPotStack, phase: string): void {
+    const [bankChip] = this.darbyBankChips.splice(bankIndex, 1);
+    if (!bankChip) return;
+
+    const state = this.get(bankChip.owner);
+    state.heldByDarby--;
+    state.inPot++;
+    this.darbyBetCounter++;
+    pot.push({
+      id: `${bankChip.id}_DARBY_BET_${this.darbyBetCounter}`,
+      owner: bankChip.owner,
+      pledgedAtPhase: phase,
+      isWagerable: bankChip.isWagerable
+    });
   }
 
   /**
@@ -391,14 +424,18 @@ export class SoulVaultMap {
       s.inPot = Math.max(0, s.inPot - 1);
       if (winner === 'PLAYER') {
         s.heldByPlayer++;
-        if (chip.isWagerable) s.wagerableByPlayer++;
-      } else if (
-        (chip.owner === 'POLNAREFF' || chip.owner === 'JOSEPH') &&
-        !chip.id.includes('_DARBY_CHIP_')
-      ) {
-        s.heldByPlayer++;
+        if (
+          chip.isWagerable ||
+          chip.owner === 'JOTARO' ||
+          chip.owner === 'AVDOL' ||
+          chip.owner === 'KAKYOIN' ||
+          chip.owner === 'HOLLY'
+        ) {
+          s.wagerableByPlayer++;
+        }
       } else {
         s.heldByDarby++;
+        this.darbyBankChips.push(chip);
       }
     }
   }
@@ -414,11 +451,17 @@ export class SoulVaultMap {
       // If it belonged to Polnareff/Joseph and was pledged by Darby, return to Darby; else player
       if (chip.id.includes('DARBY')) {
         s.heldByDarby++;
+        this.darbyBankChips.push(chip);
       } else {
         s.heldByPlayer++;
         if (chip.isWagerable) s.wagerableByPlayer++;
       }
     }
+  }
+
+  public clearDarbyBank(owner: SoulOwner): void {
+    this.darbyBankChips = this.darbyBankChips.filter(chip => chip.owner !== owner);
+    this.get(owner).heldByDarby = 0;
   }
 
   /**
