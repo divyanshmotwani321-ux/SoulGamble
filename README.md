@@ -45,5 +45,3 @@ After running the dev command, your terminal will display a local server link (u
 * Copy that localhost link.
 * Paste it into your web browser.
 * Start playing!
-
-```
