@@ -831,11 +831,8 @@ export class GameEngine {
       return 0;
     }
 
-    const pledged = this.soulVault.pledgeToPot(owner, amount, this.soulPot, this.phase, true);
+    const pledged = this.soulVault.pledgeToActiveBank(owner, amount);
     if (pledged <= 0) return 0;
-
-    this.patternQueue.enqueue('PLEDGE_SOUL');
-    this.jotaroStreetBet += pledged;
 
     const pledgeParanoiaBoost = owner === 'AVDOL'
       ? 12
@@ -866,13 +863,13 @@ export class GameEngine {
           this.intelDAG.activateNode('PLEDGED_TABOO_SOUL');
           this.dialogue = {
             speaker: 'DANIEL J. D\'ARBY',
-            text: '"Y-YOUR OWN MOTHER\'S SOUL?! Backed by cold, calculated silence... Are you truly that confident in your cards, Jotaro?!"',
+            text: '"Y-YOUR OWN MOTHER\'S SOUL?! You place it in your active bank... Are you truly that confident in your cards, Jotaro?!"',
             portraitMood: 'PANICKED'
           };
         } else {
           this.dialogue = {
             speaker: 'DANIEL J. D\'ARBY',
-            text: '"Noriaki Kakyoin\'s soul... you wager your companions with terrifying coldness."',
+            text: '"Noriaki Kakyoin\'s soul... you place your companion\'s chips in your active bank with terrifying coldness."',
             portraitMood: 'SWEATING'
           };
         }
@@ -882,7 +879,7 @@ export class GameEngine {
         this.darbyFSM.forceTransition('GREEDY', 'Predatory Greed: Unearned desperation pledge');
         this.dialogue = {
           speaker: 'DANIEL J. D\'ARBY',
-          text: '"Throwing your loved ones onto the table out of sheer desperation? I\'ll gladly add them to my collection! I CALL!"',
+          text: '"Relying on your companions\' chips out of sheer desperation? I\'ll gladly try to add them to my collection!"',
           portraitMood: 'GREEDY'
         };
       }
@@ -895,14 +892,7 @@ export class GameEngine {
       };
     }
 
-    // 1-for-1 matching: D'Arby matches the player's pledge if calling
-    const diff = Math.max(0, this.jotaroStreetBet - this.darbyStreetBet);
-    if (diff > 0) {
-      const matched = this.soulVault.darbyMatchCall(diff, this.soulPot, this.phase);
-      this.darbyStreetBet += matched;
-    }
-
-    this.actionFeed.unshift(`Pledge: Jotaro wagered ${pledged} ${owner} chip(s) -> D'Arby matches.`);
+    this.actionFeed.unshift(`Soul Vault: ${pledged} ${owner} chip(s) moved to Jotaro's active bank.`);
     this.syncComposureAndParanoia();
     return pledged;
   }
@@ -973,6 +963,7 @@ export class GameEngine {
     };
 
     this.syncComposureAndParanoia();
+    this.resolvePostDrawIfCalled();
   }
 
   public playerBluff(amount: number = 1): void {
@@ -1017,6 +1008,7 @@ export class GameEngine {
         portraitMood: 'SMUG'
       };
       this.syncComposureAndParanoia();
+      this.resolvePostDrawIfCalled();
       return;
     }
 
@@ -1050,6 +1042,7 @@ export class GameEngine {
           portraitMood: 'SWEATING'
         };
         this.syncComposureAndParanoia();
+        this.resolvePostDrawIfCalled();
       }
     } else {
       const diff = Math.max(0, this.jotaroStreetBet - this.darbyStreetBet);
@@ -1062,6 +1055,16 @@ export class GameEngine {
         portraitMood: 'CONFIDENT'
       };
       this.syncComposureAndParanoia();
+      this.resolvePostDrawIfCalled();
+    }
+  }
+
+  private resolvePostDrawIfCalled(): void {
+    if (
+      this.phase === 'POST_DRAW_BETTING' &&
+      (this.jotaroStreetBet === this.darbyStreetBet || this.soulVault.getDarbyTotalBank() === 0)
+    ) {
+      this.resolveShowdown();
     }
   }
 
@@ -1308,6 +1311,7 @@ export class GameEngine {
      11. Showdown Resolution
      ------------------------------------------------------------------ */
   public resolveShowdown(): void {
+    if (this.phase === 'SHOWDOWN') return;
     this.phase = 'SHOWDOWN';
 
     const jEval = PokerHandEvaluator.evaluate(this.authoritativeJotaroHand);
@@ -1359,10 +1363,9 @@ export class GameEngine {
       message: msg
     };
 
-    this.checkVictoryConditions();
   }
 
-  public checkVictoryConditions(): void {
+  public checkVictoryConditions(): boolean {
     const polnareff = this.soulVault.get('POLNAREFF');
     const joseph = this.soulVault.get('JOSEPH');
     const holly = this.soulVault.get('HOLLY');
@@ -1374,7 +1377,7 @@ export class GameEngine {
         text: '"HOLLY KUJO\'S SOUL IS COMPROMISED! You failed to protect your mother! GAME OVER!"',
         portraitMood: 'CONFIDENT'
       };
-      return;
+      return true;
     }
 
     if (
@@ -1388,7 +1391,7 @@ export class GameEngine {
         text: '"Jotaro! You recovered both Polnareff and Mr. Joestar! Truly, a magnificent psychological victory!"',
         portraitMood: 'CONFIDENT'
       };
-      return;
+      return true;
     }
 
     if (this.soulVault.getPlayerWagerableChips() <= 0) {
@@ -1401,7 +1404,7 @@ export class GameEngine {
           text: '"Your active chips are gone... but the Soul Vault still holds one final wager. Choose your collateral before the next hand."',
           portraitMood: 'SWEATING'
         };
-        return;
+        return false;
       }
 
       this.phase = 'DEFEAT';
@@ -1410,17 +1413,19 @@ export class GameEngine {
         text: '"You have no wagerable chips left, and no souls remain in the vault. DEFEAT!"',
         portraitMood: 'CONFIDENT'
       };
+      return true;
     }
+
+    return false;
   }
 
   public nextHand(): void {
     if (this.phase !== 'BETWEEN_HANDS' && this.phase !== 'SHOWDOWN') return;
-    if (this.phase === 'BETWEEN_HANDS' && this.soulVault.getPlayerWagerableChips() <= 0) {
-      const hasPlayerPledge = this.soulPot.toTelemetry().potChips.some(
-        chip => !chip.id.includes('DARBY')
-      );
-      if (!hasPlayerPledge) return;
+    if (this.phase === 'SHOWDOWN') {
+      if (this.checkVictoryConditions()) return;
+      if (this.soulVault.getPlayerWagerableChips() <= 0) return;
     }
+    if (this.soulVault.getPlayerWagerableChips() <= 0) return;
     this.handNumber++;
     // Permanent between-hand paranoia decay (-10)
     this.syncComposureAndParanoia(-10);

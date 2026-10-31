@@ -123,45 +123,54 @@ const def1 = vault.calculatePotDeficit(pot);
 assert(def1 < 0, `Pot deficit is negative when D'Arby has ample chips (deficit: ${def1})`);
 vault.refundPot(pot);
 
-// Test Liquidity Gate on Soul Vault:
-// Avdol & Kakyoin locked when Jotaro chips > 2 and facing 0 bet
-assert(vault.canPledge('AVDOL', 0).allowed === false, 'Liquidity Gate blocks Avdol when Jotaro has 6 active chips');
-assert(vault.canPledge('KAKYOIN', 0).allowed === false, 'Liquidity Gate blocks Kakyoin when Jotaro has 6 active chips');
-assert(vault.canPledge('HOLLY', 0).allowed === false, 'Ultimate Taboo blocks Holly when other companion souls are safe');
+// Test the strict Soul Vault depletion sequence.
+const tieredVault = new SoulVaultMap();
+const tieredPot = new SoulPotStack();
+assert(tieredVault.canPledge('AVDOL', 0).allowed === false, 'Avdol stays locked while Jotaro has active chips');
+assert(tieredVault.canPledge('KAKYOIN', 0).allowed === false, 'Kakyoin cannot skip Avdol');
+assert(tieredVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked at match start');
 
-// Drain Jotaro chips to 2 -> Avdol & Kakyoin become unlocked
-vault.get('JOTARO').heldByPlayer = 2;
-assert(vault.canPledge('AVDOL', 0).allowed === true, 'Liquidity Gate unlocks Avdol when Jotaro active chips <= 2');
-assert(vault.canPledge('KAKYOIN', 0).allowed === true, 'Liquidity Gate unlocks Kakyoin when Jotaro active chips <= 2');
+tieredVault.pledgeToPot('JOTARO', 6, tieredPot, 'TEST_LOSS', true);
+tieredVault.awardPot('DARBY', tieredPot);
+assert(
+  tieredVault.get('JOTARO').heldByPlayer === 0 &&
+    tieredVault.get('JOTARO').heldByDarby === 6 &&
+    tieredVault.canPledge('AVDOL', 0).allowed,
+  'Losing Jotaro’s starting bank unlocks Avdol without regenerating chips'
+);
+assert(tieredVault.canPledge('KAKYOIN', 0).allowed === false, 'Kakyoin remains locked until Avdol is used');
 
-// Reset Jotaro chips
-vault.get('JOTARO').heldByPlayer = 6;
+tieredVault.pledgeToActiveBank('AVDOL', 6);
+assert(
+  tieredVault.get('JOTARO').heldByPlayer === 6 &&
+    tieredVault.canPledge('KAKYOIN', 0).allowed === false,
+  'Pledging Avdol reloads Jotaro’s bank and keeps Kakyoin locked'
+);
+tieredVault.pledgeToPot('JOTARO', 6, tieredPot, 'TEST_LOSS', true);
+tieredVault.awardPot('DARBY', tieredPot);
+assert(
+  tieredVault.get('JOTARO').heldByPlayer === 0 &&
+    tieredVault.get('JOTARO').heldByDarby === 12 &&
+    tieredVault.canPledge('KAKYOIN', 0).allowed,
+  'Losing all pledged Avdol chips unlocks Kakyoin without restoring Jotaro’s bank'
+);
+assert(tieredVault.canPledge('HOLLY', 0).allowed === false, 'Holly cannot skip Kakyoin');
 
-const lastResortVault = new SoulVaultMap();
-assert(lastResortVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked at match start');
-lastResortVault.get('AVDOL').heldByPlayer = 0;
-lastResortVault.get('AVDOL').heldByDarby = 6;
-lastResortVault.get('KAKYOIN').heldByPlayer = 0;
-lastResortVault.get('KAKYOIN').heldByDarby = 6;
+tieredVault.pledgeToActiveBank('KAKYOIN', 6);
+assert(tieredVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked while Kakyoin chips are active');
+tieredVault.pledgeToPot('JOTARO', 6, tieredPot, 'TEST_LOSS', true);
+tieredVault.awardPot('DARBY', tieredPot);
 assert(
-  lastResortVault.canPledge('HOLLY', 0).allowed === false,
-  'Holly remains locked while Jotaro has active wagerable chips'
+  tieredVault.get('JOTARO').heldByPlayer === 0 &&
+    tieredVault.get('JOTARO').heldByDarby === 18 &&
+    tieredVault.canPledge('HOLLY', 0).allowed,
+  'Losing Kakyoin’s pledged chips unlocks Holly as the final lifeline'
 );
-lastResortVault.get('JOTARO').heldByPlayer = 0;
-lastResortVault.get('JOTARO').wagerableByPlayer = 0;
-lastResortVault.get('POLNAREFF').heldByPlayer = 6;
-lastResortVault.get('JOSEPH').heldByPlayer = 6;
-assert(
-  lastResortVault.getPlayerWagerableChips() === 0 &&
-    lastResortVault.canPledge('HOLLY', 0).allowed,
-  'Holly unlocks only after Jotaro, Avdol, and Kakyoin lose their chips; liberated souls do not count'
-);
-lastResortVault.get('KAKYOIN').heldByDarby = 5;
-lastResortVault.get('KAKYOIN').inPot = 1;
-assert(
-  lastResortVault.canPledge('HOLLY', 0).allowed === false,
-  'Holly stays locked while a Kakyoin chip is still in the pot'
-);
+tieredVault.get('JOTARO').inPot = 1;
+assert(tieredVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked while chips await pot resolution');
+tieredVault.get('JOTARO').inPot = 0;
+tieredVault.get('KAKYOIN').inPot = 1;
+assert(tieredVault.canPledge('HOLLY', 0).allowed === false, 'Holly stays locked while Kakyoin chips remain unresolved');
 
 // Test Buffs/Debuffs calculation
 vault.get('HOLLY').inPot = 1;
@@ -328,12 +337,18 @@ assert(
   'Match reset restores the Hand 1 mental-state defaults'
 );
 
-const soulPledgeEngine = new GameEngine();
-soulPledgeEngine.phase = 'ACCUSATION_WINDOW';
-soulPledgeEngine.recentCheatType = 'BOTTOM_DEAL';
-soulPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 2;
-soulPledgeEngine.pocketIntel();
+const createPledgeTestEngine = () => {
+  const engine = new GameEngine();
+  engine.phase = 'PRE_DRAW_BETTING';
+  engine.soulVault.refundPot(engine.soulPot);
+  engine.soulVault.pledgeToPot('JOTARO', 6, engine.soulPot, 'TEST_LOSS', true);
+  engine.soulVault.awardPot('DARBY', engine.soulPot);
+  engine.hasPocketedIntel = true;
+  engine.syncComposureAndParanoia();
+  return engine;
+};
 
+const soulPledgeEngine = createPledgeTestEngine();
 let paranoiaBeforePledge = soulPledgeEngine.metrics.paranoia;
 soulPledgeEngine.pledgeSoul('AVDOL', 1);
 assert(
@@ -342,28 +357,67 @@ assert(
   'Avdol pledge increases paranoia by 12% after pocketing cheat intel'
 );
 
-paranoiaBeforePledge = soulPledgeEngine.metrics.paranoia;
-soulPledgeEngine.pledgeSoul('KAKYOIN', 1);
+const kakyoinPledgeEngine = createPledgeTestEngine();
+assert(kakyoinPledgeEngine.pledgeSoul('AVDOL', 6) === 6, 'Avdol is the first available pledge tier');
+kakyoinPledgeEngine.soulVault.pledgeToPot('JOTARO', 6, kakyoinPledgeEngine.soulPot, 'TEST_LOSS', true);
+kakyoinPledgeEngine.soulVault.awardPot('DARBY', kakyoinPledgeEngine.soulPot);
+paranoiaBeforePledge = kakyoinPledgeEngine.metrics.paranoia;
+assert(kakyoinPledgeEngine.pledgeSoul('KAKYOIN', 6) === 6, 'Kakyoin unlocks after Avdol’s pledged chips are lost');
 assert(
-  soulPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 18 &&
-    soulPledgeEngine.metrics.composure === 100 - soulPledgeEngine.metrics.paranoia,
+  kakyoinPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 18 &&
+    kakyoinPledgeEngine.metrics.composure === 100 - kakyoinPledgeEngine.metrics.paranoia,
   'Kakyoin pledge increases paranoia by 18% after pocketing cheat intel'
 );
 
 const hollyPledgeEngine = new GameEngine();
 hollyPledgeEngine.phase = 'PRE_DRAW_BETTING';
+hollyPledgeEngine.soulVault.refundPot(hollyPledgeEngine.soulPot);
 hollyPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 0;
 hollyPledgeEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
+hollyPledgeEngine.soulVault.get('JOTARO').inPot = 0;
 hollyPledgeEngine.soulVault.get('AVDOL').heldByPlayer = 0;
 hollyPledgeEngine.soulVault.get('AVDOL').heldByDarby = 6;
 hollyPledgeEngine.soulVault.get('KAKYOIN').heldByPlayer = 0;
 hollyPledgeEngine.soulVault.get('KAKYOIN').heldByDarby = 6;
 paranoiaBeforePledge = hollyPledgeEngine.metrics.paranoia;
-hollyPledgeEngine.pledgeSoul('HOLLY', 1);
+const hollyPledgePotSize = hollyPledgeEngine.soulPot.size();
+const hollyPledgeDarbyBank = hollyPledgeEngine.soulVault.getDarbyTotalBank();
+assert(hollyPledgeEngine.pledgeSoul('HOLLY', 1) === 1, 'Unlocked Holly pledge transfers one chip');
 assert(
   hollyPledgeEngine.metrics.paranoia === paranoiaBeforePledge + 30 &&
     hollyPledgeEngine.metrics.composure === 100 - hollyPledgeEngine.metrics.paranoia,
   'Unlocked Holly pledge increases paranoia by 30% and preserves inverse composure'
+);
+assert(
+  hollyPledgeEngine.soulVault.get('JOTARO').wagerableByPlayer === 1 &&
+    hollyPledgeEngine.soulPot.size() === hollyPledgePotSize &&
+    hollyPledgeEngine.jotaroStreetBet === 0 &&
+    hollyPledgeEngine.soulVault.getDarbyTotalBank() === hollyPledgeDarbyBank,
+  'Pledging Holly reloads Jotaro’s bank without betting or moving D’Arby chips'
+);
+
+const bankReloadEngine = new GameEngine();
+bankReloadEngine.phase = 'PRE_DRAW_BETTING';
+bankReloadEngine.soulVault.refundPot(bankReloadEngine.soulPot);
+bankReloadEngine.soulVault.get('JOTARO').heldByPlayer = 0;
+bankReloadEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
+const initialPledgePotSize = bankReloadEngine.soulPot.size();
+const initialPledgeDarbyBank = bankReloadEngine.soulVault.getDarbyTotalBank();
+assert(bankReloadEngine.pledgeSoul('AVDOL', 2) === 2, 'Avdol pledge reloads two chips');
+assert(
+  bankReloadEngine.soulVault.get('AVDOL').heldByPlayer === 4 &&
+    bankReloadEngine.soulVault.get('JOTARO').heldByPlayer === 2 &&
+    bankReloadEngine.soulVault.get('JOTARO').wagerableByPlayer === 2 &&
+    bankReloadEngine.soulPot.size() === initialPledgePotSize &&
+    bankReloadEngine.jotaroStreetBet === 0 &&
+    bankReloadEngine.soulVault.getDarbyTotalBank() === initialPledgeDarbyBank,
+  'A companion pledge transfers chips only into Jotaro’s active bank'
+);
+bankReloadEngine.playerRaise(1);
+assert(
+  bankReloadEngine.jotaroStreetBet === 1 &&
+    bankReloadEngine.soulPot.size() === initialPledgePotSize + 2,
+  'Jotaro can make a separate normal bet using the reloaded bank'
 );
 
 const lifelineEngine = new GameEngine();
@@ -389,6 +443,26 @@ assert(
   'Pledging a vault chip allows the next hand to begin'
 );
 
+const noRegenerationEngine = new GameEngine();
+noRegenerationEngine.soulVault.refundPot(noRegenerationEngine.soulPot);
+noRegenerationEngine.soulVault.pledgeToPot('JOTARO', 6, noRegenerationEngine.soulPot, 'TEST_LOSS', true);
+noRegenerationEngine.soulVault.awardPot('DARBY', noRegenerationEngine.soulPot);
+noRegenerationEngine.checkVictoryConditions();
+noRegenerationEngine.nextHand();
+assert(
+  noRegenerationEngine.handNumber === 1 &&
+    noRegenerationEngine.soulVault.get('JOTARO').heldByPlayer === 0,
+  'An exhausted Jotaro bank does not regenerate or advance before the next soul is pledged'
+);
+assert(noRegenerationEngine.pledgeSoul('AVDOL', 6) === 6, 'The depleted bank can explicitly reload from Avdol');
+noRegenerationEngine.nextHand();
+assert(
+  noRegenerationEngine.handNumber === 2 &&
+    noRegenerationEngine.soulVault.get('JOTARO').heldByPlayer === 5 &&
+    noRegenerationEngine.soulVault.get('AVDOL').heldByPlayer === 0,
+  'Starting the next hand spends only the ante from the explicitly pledged Avdol bank'
+);
+
 const foldToVaultEngine = new GameEngine();
 foldToVaultEngine.phase = 'PRE_DRAW_BETTING';
 foldToVaultEngine.soulVault.get('JOTARO').heldByPlayer = 0;
@@ -405,8 +479,10 @@ assert(
 
 const blindPledgeEngine = new GameEngine();
 blindPledgeEngine.setBlindChoice(true);
+blindPledgeEngine.soulVault.refundPot(blindPledgeEngine.soulPot);
 blindPledgeEngine.phase = 'PRE_DRAW_BETTING';
-blindPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 2;
+blindPledgeEngine.soulVault.get('JOTARO').heldByPlayer = 0;
+blindPledgeEngine.soulVault.get('JOTARO').wagerableByPlayer = 0;
 paranoiaBeforePledge = blindPledgeEngine.metrics.paranoia;
 blindPledgeEngine.pledgeSoul('AVDOL', 1);
 assert(
@@ -533,6 +609,79 @@ if (pokerEngine.toCall > 0) {
 }
 assert(pokerEngine.phase === 'SHOWDOWN', 'Checking/matching in POST_DRAW_BETTING advances phase to SHOWDOWN');
 assert(pokerEngine.showdownResult !== null, 'showdownResult populated');
+assert(
+  pokerEngine.getSanitizedState().darbyHand.every(card => card.rank !== '?') &&
+    pokerEngine.soulPot.isEmpty(),
+  'Showdown reveals all D’Arby cards and settles the pot before advancing'
+);
+
+const postDrawCheckEngine = new GameEngine();
+postDrawCheckEngine.phase = 'POST_DRAW_BETTING';
+postDrawCheckEngine.currentStreet = 'POST_DRAW';
+postDrawCheckEngine.metrics.composure = 40;
+postDrawCheckEngine.metrics.paranoia = 60;
+Object.defineProperty(postDrawCheckEngine, 'authoritativeDarbyHand', {
+  value: [
+    { id: 'TEST_2S', suit: 'SPADES', rank: '2', value: 2 },
+    { id: 'TEST_4H', suit: 'HEARTS', rank: '4', value: 4 },
+    { id: 'TEST_6C', suit: 'CLUBS', rank: '6', value: 6 },
+    { id: 'TEST_8D', suit: 'DIAMONDS', rank: '8', value: 8 },
+    { id: 'TEST_10S', suit: 'SPADES', rank: '10', value: 10 }
+  ]
+});
+postDrawCheckEngine.playerCheck();
+assert(
+  postDrawCheckEngine.phase === 'SHOWDOWN' &&
+    postDrawCheckEngine.showdownResult !== null &&
+    postDrawCheckEngine.getSanitizedState().darbyHand.every(card => card.rank !== '?'),
+  'A post-draw check-back immediately triggers a visible showdown'
+);
+
+const postDrawBetEngine = new GameEngine();
+postDrawBetEngine.phase = 'POST_DRAW_BETTING';
+postDrawBetEngine.currentStreet = 'POST_DRAW';
+Object.defineProperty(postDrawBetEngine, 'authoritativeDarbyHand', {
+  value: [
+    { id: 'TEST_7S', suit: 'SPADES', rank: '7', value: 7 },
+    { id: 'TEST_7H', suit: 'HEARTS', rank: '7', value: 7 },
+    { id: 'TEST_7C', suit: 'CLUBS', rank: '7', value: 7 },
+    { id: 'TEST_7D', suit: 'DIAMONDS', rank: '7', value: 7 },
+    { id: 'TEST_2S', suit: 'SPADES', rank: '2', value: 2 }
+  ]
+});
+postDrawBetEngine.playerCheck();
+assert(
+  postDrawBetEngine.phase === 'POST_DRAW_BETTING' && postDrawBetEngine.toCall === 1,
+  'A D’Arby post-draw bet leaves Jotaro facing a call'
+);
+postDrawBetEngine.playerCall();
+assert(
+  postDrawBetEngine.phase === 'SHOWDOWN' && postDrawBetEngine.showdownResult !== null,
+  'Calling D’Arby’s post-draw bet triggers showdown'
+);
+
+const postDrawCallEngine = new GameEngine();
+postDrawCallEngine.phase = 'POST_DRAW_BETTING';
+postDrawCallEngine.currentStreet = 'POST_DRAW';
+postDrawCallEngine.darbyStreetBet = 1;
+postDrawCallEngine.playerCall();
+assert(
+  postDrawCallEngine.phase === 'SHOWDOWN' &&
+    postDrawCallEngine.showdownResult !== null &&
+    postDrawCallEngine.getSanitizedState().darbyHand.every(card => card.rank !== '?'),
+  'Calling D’Arby’s post-draw bet resolves and reveals showdown'
+);
+
+const postDrawRaiseEngine = new GameEngine();
+postDrawRaiseEngine.phase = 'POST_DRAW_BETTING';
+postDrawRaiseEngine.currentStreet = 'POST_DRAW';
+postDrawRaiseEngine.playerRaise(1);
+assert(
+  postDrawRaiseEngine.phase === 'SHOWDOWN' &&
+    postDrawRaiseEngine.showdownResult !== null &&
+    postDrawRaiseEngine.getSanitizedState().darbyHand.every(card => card.rank !== '?'),
+  'D’Arby’s post-draw call of a raise resolves and reveals showdown'
+);
 
 // 10. Star Platinum Deck Tamper Single-Use
 console.log('\n[10. Testing Star Platinum Deck Tamper]');

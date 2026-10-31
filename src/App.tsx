@@ -163,16 +163,13 @@ export const App: React.FC = () => {
     const activeWagerableChips = vaultEntries
       .filter(entry => activeOwners.includes(entry.owner))
       .reduce((total, entry) => total + entry.wagerableByPlayer, 0);
-    const hasPlayerPledge = gameState.dsTelemetry.soulPot.potChips.some(
-      chip => !chip.id.includes('DARBY')
-    );
     const hasVaultReserve = (['JOTARO', 'AVDOL', 'KAKYOIN', 'HOLLY'] as const).some(
       owner => (vaultEntries.find(entry => entry.owner === owner)?.heldByPlayer || 0) > 0
     );
 
-    if (activeWagerableChips === 0 && !hasPlayerPledge && hasVaultReserve) {
+    if (activeWagerableChips === 0 && hasVaultReserve) {
       setIsSoulVaultOpen(true);
-    } else if (activeWagerableChips === 0 && hasPlayerPledge) {
+    } else if (activeWagerableChips > 0) {
       setIsSoulVaultOpen(false);
     }
   }, [gameState]);
@@ -417,13 +414,12 @@ export const App: React.FC = () => {
     dsTelemetry
   } = gameState;
 
-  const jotaroChips = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOTARO')?.heldByPlayer || 0;
   const activeWagerableChips = dsTelemetry.soulVault.vaultEntries
     .filter(entry => (['JOTARO', 'AVDOL', 'KAKYOIN'] as SoulOwner[]).includes(entry.owner))
     .reduce((total, entry) => total + entry.wagerableByPlayer, 0);
+  const jotaroChips = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOTARO')?.heldByPlayer || 0;
   const mustPledgeSoul = phase === 'BETWEEN_HANDS' &&
-    activeWagerableChips === 0 &&
-    !dsTelemetry.soulPot.potChips.some(chip => !chip.id.includes('DARBY'));
+    activeWagerableChips === 0;
   const potSize = dsTelemetry.soulPot.stackSize;
   const polnareffSafe = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'POLNAREFF')?.heldByPlayer || 0;
   const josephSafe = dsTelemetry.soulVault.vaultEntries.find(e => e.owner === 'JOSEPH')?.heldByPlayer || 0;
@@ -1144,6 +1140,7 @@ export const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => sendAction('NEXT_HAND')}
+                  disabled={phase === 'BETWEEN_HANDS' && activeWagerableChips === 0}
                   className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-arcade text-[10px] uppercase tracking-wider border-2 border-black shadow-manga transition"
                 >
                   [DEAL NEXT HAND &rarr;]
@@ -1312,9 +1309,7 @@ export const App: React.FC = () => {
         isOpen={isSoulVaultOpen}
         onClose={() => setIsSoulVaultOpen(false)}
         vaultEntries={dsTelemetry.soulVault.vaultEntries}
-        jotaroActiveChips={jotaroChips}
         activeWagerableChips={activeWagerableChips}
-        toCall={toCall}
         mustPledge={mustPledgeSoul}
         onPledge={(owner: SoulOwner, amount: number) =>
           sendAction('PLEDGE_SOUL', { owner, amount })

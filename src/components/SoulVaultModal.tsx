@@ -13,9 +13,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   vaultEntries: SoulState[];
-  jotaroActiveChips: number;
   activeWagerableChips: number;
-  toCall: number;
   mustPledge: boolean;
   onPledge: (owner: SoulOwner, amount: number) => void;
 }
@@ -24,9 +22,7 @@ export const SoulVaultModal: React.FC<Props> = ({
   isOpen,
   onClose,
   vaultEntries,
-  jotaroActiveChips,
   activeWagerableChips,
-  toCall,
   mustPledge,
   onPledge
 }) => {
@@ -40,26 +36,36 @@ export const SoulVaultModal: React.FC<Props> = ({
 
   const avdol = vaultEntries.find(e => e.owner === 'AVDOL');
   const kakyoin = vaultEntries.find(e => e.owner === 'KAKYOIN');
+  const jotaro = vaultEntries.find(e => e.owner === 'JOTARO');
+  const jotaroBankDepleted = jotaro?.heldByPlayer === 0 && jotaro.inPot === 0;
   const hollyUnlocked = Boolean(
     avdol &&
-      kakyoin &&
-      avdol.heldByPlayer === 0 &&
-      avdol.heldByDarby === avdol.totalChips &&
-      avdol.inPot === 0 &&
-      kakyoin.heldByPlayer === 0 &&
-      kakyoin.heldByDarby === kakyoin.totalChips &&
-      kakyoin.inPot === 0 &&
-      activeWagerableChips === 0
+    kakyoin &&
+    avdol.heldByPlayer === 0 &&
+    avdol.inPot === 0 &&
+    kakyoin.heldByPlayer === 0 &&
+    kakyoin.inPot === 0 &&
+    jotaroBankDepleted &&
+    activeWagerableChips === 0
   );
 
   const checkGated = (owner: SoulOwner): { isGated: boolean; reason?: string } => {
     if (owner === 'JOTARO') return { isGated: false };
-    if (owner === 'AVDOL' || owner === 'KAKYOIN') {
-      const allowed = jotaroActiveChips <= 2 || toCall > jotaroActiveChips;
+    if (owner === 'AVDOL') {
+      if (!jotaroBankDepleted) {
+        return {
+          isGated: true,
+          reason: 'Tier 1: Locked until Jotaro loses all active chips.'
+        };
+      }
+      return { isGated: false };
+    }
+    if (owner === 'KAKYOIN') {
+      const allowed = jotaroBankDepleted && avdol?.heldByPlayer === 0 && avdol.inPot === 0;
       if (!allowed) {
         return {
           isGated: true,
-          reason: `Liquidity Gate: Locked while you have >2 active Jotaro chips (${jotaroActiveChips} left) unless facing a bet exceeding your chips.`
+          reason: 'Tier 2: Locked until Avdol is fully pledged and Jotaro loses the reloaded bank.'
         };
       }
       return { isGated: false };
@@ -77,7 +83,11 @@ export const SoulVaultModal: React.FC<Props> = ({
   };
 
   const selectedGating = checkGated(selectedOwner);
-  const canConfirm = !selectedGating.isGated && maxAvailable > 0 && amount > 0 && amount <= maxAvailable;
+  const canConfirm = selectedOwner !== 'JOTARO' &&
+    !selectedGating.isGated &&
+    maxAvailable > 0 &&
+    amount > 0 &&
+    amount <= maxAvailable;
 
   const handleConfirm = () => {
     if (canConfirm) {
@@ -267,7 +277,9 @@ export const SoulVaultModal: React.FC<Props> = ({
           >
             {selectedGating.isGated
               ? 'Wager Locked'
-              : `Pledge ${amount} Chip${amount > 1 ? 's' : ''} to Pot`}
+              : selectedOwner === 'JOTARO'
+                ? 'Already in Active Bank'
+                : `Add ${amount} Chip${amount > 1 ? 's' : ''} to Active Bank`}
           </button>
         </div>
       </div>

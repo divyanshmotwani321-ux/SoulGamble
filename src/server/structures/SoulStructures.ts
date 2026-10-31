@@ -256,10 +256,7 @@ export class SoulVaultMap {
   }
 
   /**
-   * Liquidity Gate on Soul Vault:
-   * 1. Avdol & Kakyoin: Only when Jotaro active chips <= 2 OR facing a bet/raise exceeding active chips.
-   * 2. Holly Kujo: Locked until at least 1 other collateral soul (Avdol or Kakyoin) is in pot or lost,
-   *    OR in an All-In confrontation where D'Arby has <= 6 chips remaining in his reserve.
+   * Soul Vault collateral unlocks one tier at a time after the active bank is depleted.
    */
   public canPledge(owner: SoulOwner, currentBetFacing: number = 0): { allowed: boolean; reason?: string } {
     const s = this.get(owner);
@@ -277,14 +274,26 @@ export class SoulVaultMap {
       return { allowed: true };
     }
 
-    const jotaroChips = this.getPlayerActiveChips();
+    const jotaro = this.get('JOTARO');
+    const jotaroBankDepleted = jotaro.heldByPlayer === 0 && jotaro.inPot === 0;
 
-    if (owner === 'AVDOL' || owner === 'KAKYOIN') {
-      const allowed = jotaroChips <= 2 || currentBetFacing > jotaroChips;
+    if (owner === 'AVDOL') {
+      if (!jotaroBankDepleted) {
+        return {
+          allowed: false,
+          reason: 'Tier 1: Muhammad Avdol unlocks only after Jotaro loses all active chips.'
+        };
+      }
+      return { allowed: true };
+    }
+
+    if (owner === 'KAKYOIN') {
+      const avdol = this.get('AVDOL');
+      const allowed = jotaroBankDepleted && avdol.heldByPlayer === 0 && avdol.inPot === 0;
       if (!allowed) {
         return {
           allowed: false,
-          reason: `Liquidity Gate: You can only pledge ${s.name} when you have ≤2 active Jotaro chips (current: ${jotaroChips}) or face a bet exceeding your chips.`
+          reason: 'Tier 2: Noriaki Kakyoin unlocks after Avdol is fully pledged and Jotaro loses the reloaded bank.'
         };
       }
       return { allowed: true };
@@ -295,11 +304,10 @@ export class SoulVaultMap {
       const kakyoin = this.get('KAKYOIN');
       const allowed =
         avdol.heldByPlayer === 0 &&
-        avdol.heldByDarby === avdol.totalChips &&
         avdol.inPot === 0 &&
         kakyoin.heldByPlayer === 0 &&
-        kakyoin.heldByDarby === kakyoin.totalChips &&
         kakyoin.inPot === 0 &&
+        jotaroBankDepleted &&
         this.getPlayerWagerableChips() === 0;
       if (!allowed) {
         return {
@@ -311,6 +319,19 @@ export class SoulVaultMap {
     }
 
     return { allowed: true };
+  }
+
+  public pledgeToActiveBank(owner: SoulOwner, amount: number): number {
+    if (owner === 'JOTARO' || owner === 'POLNAREFF' || owner === 'JOSEPH') return 0;
+
+    const source = this.get(owner);
+    const bank = this.get('JOTARO');
+    const pledged = Math.min(Math.max(0, Math.floor(amount)), source.heldByPlayer);
+    source.heldByPlayer -= pledged;
+    source.wagerableByPlayer = Math.max(0, source.wagerableByPlayer - pledged);
+    bank.heldByPlayer += pledged;
+    bank.wagerableByPlayer += pledged;
+    return pledged;
   }
 
   public pledgeToPot(owner: SoulOwner, amount: number, pot: SoulPotStack, phase: string, bypassGating: boolean = false): number {

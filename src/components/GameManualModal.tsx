@@ -163,7 +163,7 @@ export const GameManualModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <div className="p-3 bg-emerald-950/60 border border-emerald-500 rounded-lg space-y-1">
                     <div className="font-arcade text-[9px] text-emerald-400">HIGH SUCCESS CONDITIONS</div>
                     <div className="text-[11px] text-emerald-200">
-                      If D'Arby's Paranoia &gt;= 45% OR you stood pat (discarded 0–1 cards), the bluff inflicts <strong>+18% Paranoia, -15% Composure</strong>, and can force D'Arby to FOLD!
+                      If D'Arby's Paranoia &gt;= 45% OR you stood pat (discarded 0–1 cards), the bluff inflicts <strong>+18% Paranoia, -18% Composure</strong>, and can force D'Arby to FOLD!
                     </div>
                   </div>
                   <div className="p-3 bg-rose-950/60 border border-rose-500 rounded-lg space-y-1">
@@ -274,4 +274,3 @@ export const GameManualModal: React.FC<Props> = ({ isOpen, onClose }) => {
     </div>
   );
 };
-
